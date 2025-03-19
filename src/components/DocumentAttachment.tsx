@@ -1,5 +1,5 @@
 
-import { CloudArrowUp, File, FileArchive, FileImage, FileText, FilePdf, X } from 'lucide-react';
+import { Upload, File, Archive, Image, FileText, AlertCircle, X } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 
@@ -41,13 +41,13 @@ const sampleDocuments: AttachedDocument[] = [
 const getFileIcon = (type: DocumentType) => {
   switch (type) {
     case 'pdf':
-      return <FilePdf className="h-5 w-5 text-red-500" />;
+      return <AlertCircle className="h-5 w-5 text-red-500" />;
     case 'image':
-      return <FileImage className="h-5 w-5 text-blue-500" />;
+      return <Image className="h-5 w-5 text-blue-500" />;
     case 'document':
       return <FileText className="h-5 w-5 text-blue-700" />;
     case 'archive':
-      return <FileArchive className="h-5 w-5 text-orange-500" />;
+      return <Archive className="h-5 w-5 text-orange-500" />;
     default:
       return <File className="h-5 w-5 text-gray-500" />;
   }
@@ -88,7 +88,7 @@ const DocumentAttachment = () => {
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
-        <CloudArrowUp className={`h-10 w-10 mb-3 ${isDragging ? 'text-primary' : 'text-muted-foreground/60'}`} />
+        <Upload className={`h-10 w-10 mb-3 ${isDragging ? 'text-primary' : 'text-muted-foreground/60'}`} />
         <p className="text-sm text-center text-muted-foreground mb-2">
           <span className="font-medium">Click to upload</span> or drag and drop
         </p>
