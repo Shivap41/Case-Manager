@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,7 @@ import CommentSection from '@/components/CommentSection';
 import { AlertCircle, Calendar, ChevronLeft, Clock, MessageSquare, Paperclip, Plus, User, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
-import { useCases } from '@/context/CaseContext';
+import { useCases, Case } from '@/context/CaseContext';
 
 type TaskStatus = 'pending' | 'inprogress' | 'completed';
 
@@ -96,10 +97,14 @@ const CaseDetail = () => {
     status: 'inprogress' as const,
     owner: 'Unknown',
     department: 'Unknown',
-    createdBy: 'Unknown',
-    createdDate: 'Unknown',
     dueDate: 'Unknown',
-    priority: 'Medium'
+    comments: 0,
+    attachments: 0,
+    tasks: 0,
+    completedTasks: 0,
+    priority: 'Medium',
+    createdDate: 'Unknown',
+    createdBy: 'Unknown'
   };
   
   const [tasks, setTasks] = useState<Task[]>(sampleTasks);

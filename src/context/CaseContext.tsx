@@ -15,6 +15,9 @@ export type Case = {
   attachments: number;
   tasks: number;
   completedTasks: number;
+  priority: string;
+  createdDate: string;
+  createdBy: string;
 };
 
 // Sample initial cases data
@@ -30,7 +33,10 @@ const initialCases: Case[] = [
     comments: 3,
     attachments: 2,
     tasks: 8,
-    completedTasks: 0
+    completedTasks: 0,
+    priority: 'Medium',
+    createdDate: 'July 25, 2023',
+    createdBy: 'Michael Chen'
   },
   {
     id: '2',
@@ -43,7 +49,10 @@ const initialCases: Case[] = [
     comments: 7,
     attachments: 4,
     tasks: 12,
-    completedTasks: 5
+    completedTasks: 5,
+    priority: 'High',
+    createdDate: 'July 20, 2023',
+    createdBy: 'Jane Smith'
   },
   {
     id: '3',
@@ -56,7 +65,10 @@ const initialCases: Case[] = [
     comments: 4,
     attachments: 1,
     tasks: 6,
-    completedTasks: 4
+    completedTasks: 4,
+    priority: 'Medium',
+    createdDate: 'July 22, 2023',
+    createdBy: 'David Lee'
   },
   {
     id: '4',
@@ -69,7 +81,10 @@ const initialCases: Case[] = [
     comments: 5,
     attachments: 3,
     tasks: 9,
-    completedTasks: 9
+    completedTasks: 9,
+    priority: 'Medium',
+    createdDate: 'July 18, 2023',
+    createdBy: 'Emily Wang'
   },
   {
     id: '5',
@@ -82,7 +97,10 @@ const initialCases: Case[] = [
     comments: 6,
     attachments: 8,
     tasks: 7,
-    completedTasks: 7
+    completedTasks: 7,
+    priority: 'Low',
+    createdDate: 'July 10, 2023',
+    createdBy: 'Robert Kim'
   },
   {
     id: '6',
@@ -95,7 +113,10 @@ const initialCases: Case[] = [
     comments: 2,
     attachments: 0,
     tasks: 10,
-    completedTasks: 0
+    completedTasks: 0,
+    priority: 'High',
+    createdDate: 'July 28, 2023',
+    createdBy: 'Olivia Martinez'
   },
   {
     id: '7',
@@ -108,7 +129,10 @@ const initialCases: Case[] = [
     comments: 9,
     attachments: 5,
     tasks: 8,
-    completedTasks: 8
+    completedTasks: 8,
+    priority: 'Medium',
+    createdDate: 'July 15, 2023',
+    createdBy: 'William Taylor'
   },
   {
     id: '8',
@@ -121,7 +145,10 @@ const initialCases: Case[] = [
     comments: 4,
     attachments: 6,
     tasks: 14,
-    completedTasks: 14
+    completedTasks: 14,
+    priority: 'Medium',
+    createdDate: 'July 5, 2023',
+    createdBy: 'Jane Smith'
   }
 ];
 
