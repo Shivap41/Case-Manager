@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -294,59 +295,61 @@ const CaseDetail = () => {
                 <DialogHeader>
                   <DialogTitle>Review Deviation Request</DialogTitle>
                 </DialogHeader>
-                <form onSubmit={deviationForm.handleSubmit(handleDeviationApproval)} className="space-y-4 pt-4">
-                  <p className="text-sm text-muted-foreground">
-                    This case requires deviation approval due to its regulatory significance. Please review the details and provide your approval decision.
-                  </p>
-                  
-                  <FormField
-                    control={deviationForm.control}
-                    name="status"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Decision</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          defaultValue={field.value}
-                        >
+                <Form {...deviationForm}>
+                  <form onSubmit={deviationForm.handleSubmit(handleDeviationApproval)} className="space-y-4 pt-4">
+                    <p className="text-sm text-muted-foreground">
+                      This case requires deviation approval due to its regulatory significance. Please review the details and provide your approval decision.
+                    </p>
+                    
+                    <FormField
+                      control={deviationForm.control}
+                      name="status"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Decision</FormLabel>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select decision" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="approved">Approve Deviation</SelectItem>
+                              <SelectItem value="rejected">Reject Deviation</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={deviationForm.control}
+                      name="comments"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Comments</FormLabel>
                           <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select decision" />
-                            </SelectTrigger>
+                            <Textarea 
+                              placeholder="Add comments or justification for your decision" 
+                              {...field} 
+                              rows={3} 
+                            />
                           </FormControl>
-                          <SelectContent>
-                            <SelectItem value="approved">Approve Deviation</SelectItem>
-                            <SelectItem value="rejected">Reject Deviation</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={deviationForm.control}
-                    name="comments"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Comments</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder="Add comments or justification for your decision" 
-                            {...field} 
-                            rows={3} 
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <DialogFooter className="pt-4">
-                    <DialogClose asChild>
-                      <Button type="button" variant="outline">Cancel</Button>
-                    </DialogClose>
-                    <Button type="submit">Submit Decision</Button>
-                  </DialogFooter>
-                </form>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <DialogFooter className="pt-4">
+                      <DialogClose asChild>
+                        <Button type="button" variant="outline">Cancel</Button>
+                      </DialogClose>
+                      <Button type="submit">Submit Decision</Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
               </DialogContent>
             </Dialog>
           )}
