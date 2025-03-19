@@ -3,12 +3,18 @@ import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Form, FormField, FormItem, FormLabel, FormControl } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Header from '@/components/Header';
 import TaskItem from '@/components/TaskItem';
 import DocumentAttachment from '@/components/DocumentAttachment';
 import CommentSection from '@/components/CommentSection';
-import { AlertCircle, Calendar, ChevronLeft, Clock, MessageSquare, Paperclip, Plus, User } from 'lucide-react';
+import { AlertCircle, Calendar, ChevronLeft, Clock, MessageSquare, Paperclip, Plus, User, CheckCircle2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { useForm } from 'react-hook-form';
 
 type TaskStatus = 'pending' | 'inprogress' | 'completed';
 
@@ -72,11 +78,31 @@ const sampleTasks: Task[] = [
   }
 ];
 
+type TaskFormValues = {
+  title: string;
+  description: string;
+  priority: 'low' | 'medium' | 'high';
+  assignee: string;
+  dueDate: string;
+};
+
 const CaseDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [tasks, setTasks] = useState<Task[]>(sampleTasks);
   const [activeTab, setActiveTab] = useState('details');
+  const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
+  const [isCloseCaseOpen, setIsCloseCaseOpen] = useState(false);
+
+  const taskForm = useForm<TaskFormValues>({
+    defaultValues: {
+      title: '',
+      description: '',
+      priority: 'medium',
+      assignee: '',
+      dueDate: ''
+    }
+  });
 
   // In a real application, you would fetch the case details using the ID
   const caseDetails = {
@@ -104,9 +130,38 @@ const CaseDetail = () => {
     toast.success(`Task status updated to ${newStatus}`);
   };
 
-  const handleCreateTask = () => {
-    // In a real application, this would navigate to a task creation page or open a modal
-    toast.info('Create task functionality would open here');
+  const handleCreateTask = (data: TaskFormValues) => {
+    // Generate a simple ID (in a real app, this would be from a server)
+    const newTaskId = `task-${Date.now()}`;
+    
+    // Create the new task
+    const newTask: Task = {
+      id: newTaskId,
+      title: data.title,
+      description: data.description,
+      status: 'pending',
+      priority: data.priority,
+      dueDate: data.dueDate || 'Not set',
+      assignee: data.assignee || 'Unassigned',
+      commentsCount: 0,
+      attachmentsCount: 0
+    };
+    
+    // Add the new task to the tasks array
+    setTasks([...tasks, newTask]);
+    
+    // Close the dialog and show a success message
+    setIsCreateTaskOpen(false);
+    taskForm.reset();
+    toast.success('Task created successfully');
+  };
+
+  const handleCloseCase = () => {
+    // In a real app, this would make an API call to update the case status
+    toast.success('Case closed successfully');
+    setIsCloseCaseOpen(false);
+    // Redirect to cases list after a short delay
+    setTimeout(() => navigate('/'), 1500);
   };
 
   return (
@@ -140,9 +195,30 @@ const CaseDetail = () => {
           </div>
           
           <div className="flex space-x-2">
-            <Button variant="outline">
-              Close Case
-            </Button>
+            <Dialog open={isCloseCaseOpen} onOpenChange={setIsCloseCaseOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  Close Case
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Close this case?</DialogTitle>
+                </DialogHeader>
+                <p className="py-4">
+                  Are you sure you want to close this case? This action will mark the case as complete and notify all relevant stakeholders.
+                </p>
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button variant="outline">Cancel</Button>
+                  </DialogClose>
+                  <Button onClick={handleCloseCase} className="bg-green-600 hover:bg-green-700">
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                    Confirm Close
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
             <Button>
               Edit Case
             </Button>
@@ -238,10 +314,120 @@ const CaseDetail = () => {
           <TabsContent value="tasks" className="animate-fade-in">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-medium">Tasks</h2>
-              <Button onClick={handleCreateTask}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Task
-              </Button>
+              
+              <Dialog open={isCreateTaskOpen} onOpenChange={setIsCreateTaskOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Task
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[525px]">
+                  <DialogHeader>
+                    <DialogTitle>Create New Task</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={taskForm.handleSubmit(handleCreateTask)} className="space-y-4 pt-4">
+                    <FormField
+                      control={taskForm.control}
+                      name="title"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Task Title</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter task title" {...field} required />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={taskForm.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description</FormLabel>
+                          <FormControl>
+                            <Textarea placeholder="Enter task description" {...field} rows={3} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={taskForm.control}
+                        name="priority"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Priority</FormLabel>
+                            <Select 
+                              onValueChange={field.onChange} 
+                              defaultValue={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select priority" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="low">Low</SelectItem>
+                                <SelectItem value="medium">Medium</SelectItem>
+                                <SelectItem value="high">High</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={taskForm.control}
+                        name="assignee"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Assignee</FormLabel>
+                            <Select 
+                              onValueChange={field.onChange} 
+                              defaultValue={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select assignee" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="Jane Smith">Jane Smith</SelectItem>
+                                <SelectItem value="Michael Chen">Michael Chen</SelectItem>
+                                <SelectItem value="Sarah Johnson">Sarah Johnson</SelectItem>
+                                <SelectItem value="David Lee">David Lee</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <FormField
+                      control={taskForm.control}
+                      name="dueDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Due Date</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <DialogFooter className="pt-4">
+                      <DialogClose asChild>
+                        <Button type="button" variant="outline">Cancel</Button>
+                      </DialogClose>
+                      <Button type="submit">Create Task</Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
             </div>
             
             <div className="glassmorphism rounded-xl p-6">
