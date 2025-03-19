@@ -1,7 +1,14 @@
-
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 export type CaseStatus = 'new' | 'inprogress' | 'pending' | 'completed';
+
+export type DeviationApproval = {
+  isRequired: boolean;
+  status: 'pending' | 'approved' | 'rejected';
+  approver?: string;
+  approvalDate?: string;
+  comments?: string;
+};
 
 export type Case = {
   id: string;
@@ -18,6 +25,7 @@ export type Case = {
   priority: string;
   createdDate: string;
   createdBy: string;
+  deviationApproval?: DeviationApproval;
 };
 
 // Sample initial cases data
@@ -36,7 +44,12 @@ const initialCases: Case[] = [
     completedTasks: 0,
     priority: 'Medium',
     createdDate: 'July 25, 2023',
-    createdBy: 'Michael Chen'
+    createdBy: 'Michael Chen',
+    deviationApproval: {
+      isRequired: true,
+      status: 'pending',
+      approver: 'David Lee',
+    }
   },
   {
     id: '2',
@@ -52,7 +65,14 @@ const initialCases: Case[] = [
     completedTasks: 5,
     priority: 'High',
     createdDate: 'July 20, 2023',
-    createdBy: 'Jane Smith'
+    createdBy: 'Jane Smith',
+    deviationApproval: {
+      isRequired: true,
+      status: 'approved',
+      approver: 'Emily Wang',
+      approvalDate: 'July 22, 2023',
+      comments: 'Approved with minor concerns noted.'
+    }
   },
   {
     id: '3',
@@ -156,6 +176,7 @@ type CaseContextType = {
   cases: Case[];
   addCase: (newCase: Omit<Case, 'id'>) => void;
   getCaseById: (id: string) => Case | undefined;
+  updateDeviationApproval: (caseId: string, approval: DeviationApproval) => void;
 };
 
 const CaseContext = createContext<CaseContextType | undefined>(undefined);
@@ -173,8 +194,18 @@ export const CaseProvider = ({ children }: { children: ReactNode }) => {
     return cases.find(caseItem => caseItem.id === id);
   };
 
+  const updateDeviationApproval = (caseId: string, approval: DeviationApproval) => {
+    setCases(prevCases => 
+      prevCases.map(caseItem => 
+        caseItem.id === caseId 
+          ? { ...caseItem, deviationApproval: approval } 
+          : caseItem
+      )
+    );
+  };
+
   return (
-    <CaseContext.Provider value={{ cases, addCase, getCaseById }}>
+    <CaseContext.Provider value={{ cases, addCase, getCaseById, updateDeviationApproval }}>
       {children}
     </CaseContext.Provider>
   );

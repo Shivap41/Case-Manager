@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -12,10 +11,10 @@ import Header from '@/components/Header';
 import TaskItem from '@/components/TaskItem';
 import DocumentAttachment from '@/components/DocumentAttachment';
 import CommentSection from '@/components/CommentSection';
-import { AlertCircle, Calendar, ChevronLeft, Clock, MessageSquare, Paperclip, Plus, User, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, Calendar, ChevronLeft, Clock, MessageSquare, Paperclip, Plus, User, CheckCircle2, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
-import { useCases, Case } from '@/context/CaseContext';
+import { useCases, Case, DeviationApproval } from '@/context/CaseContext';
 
 type TaskStatus = 'pending' | 'inprogress' | 'completed';
 
@@ -29,6 +28,19 @@ type Task = {
   assignee: string;
   commentsCount: number;
   attachmentsCount: number;
+};
+
+type TaskFormValues = {
+  title: string;
+  description: string;
+  priority: 'low' | 'medium' | 'high';
+  assignee: string;
+  dueDate: string;
+};
+
+type DeviationApprovalFormValues = {
+  status: 'approved' | 'rejected';
+  comments: string;
 };
 
 const sampleTasks: Task[] = [
@@ -78,18 +90,10 @@ const sampleTasks: Task[] = [
   }
 ];
 
-type TaskFormValues = {
-  title: string;
-  description: string;
-  priority: 'low' | 'medium' | 'high';
-  assignee: string;
-  dueDate: string;
-};
-
 const CaseDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getCaseById } = useCases();
+  const { getCaseById, updateDeviationApproval } = useCases();
   const caseDetails = getCaseById(id || '') || {
     id: id || '1',
     title: 'Case Not Found',
@@ -111,6 +115,7 @@ const CaseDetail = () => {
   const [activeTab, setActiveTab] = useState('details');
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
   const [isCloseCaseOpen, setIsCloseCaseOpen] = useState(false);
+  const [isDeviationDialogOpen, setIsDeviationDialogOpen] = useState(false);
 
   const taskForm = useForm<TaskFormValues>({
     defaultValues: {
@@ -119,6 +124,13 @@ const CaseDetail = () => {
       priority: 'medium',
       assignee: '',
       dueDate: ''
+    }
+  });
+
+  const deviationForm = useForm<DeviationApprovalFormValues>({
+    defaultValues: {
+      status: 'approved',
+      comments: ''
     }
   });
 
@@ -162,6 +174,26 @@ const CaseDetail = () => {
     setTimeout(() => navigate('/'), 1500);
   };
 
+  const handleDeviationApproval = (data: DeviationApprovalFormValues) => {
+    if (!id) return;
+
+    const approval: DeviationApproval = {
+      isRequired: true,
+      status: data.status,
+      approver: 'Current User',
+      approvalDate: new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }),
+      comments: data.comments
+    };
+
+    updateDeviationApproval(id, approval);
+    setIsDeviationDialogOpen(false);
+    toast.success(`Deviation ${data.status === 'approved' ? 'approved' : 'rejected'} successfully`);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -198,6 +230,28 @@ const CaseDetail = () => {
                   ? 'Pending'
                   : 'Completed'}
               </span>
+              
+              {caseDetails.deviationApproval?.isRequired && (
+                <span 
+                  className={`ml-2 text-xs px-2.5 py-1 rounded-full flex items-center
+                    ${caseDetails.deviationApproval.status === 'pending' 
+                      ? 'bg-amber-100 text-amber-800' 
+                      : caseDetails.deviationApproval.status === 'approved'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-red-100 text-red-800'}`}
+                >
+                  {caseDetails.deviationApproval.status === 'pending' 
+                    ? <AlertTriangle className="h-3 w-3 mr-1" />
+                    : caseDetails.deviationApproval.status === 'approved'
+                    ? <ShieldCheck className="h-3 w-3 mr-1" />
+                    : <AlertCircle className="h-3 w-3 mr-1" />}
+                  {caseDetails.deviationApproval.status === 'pending' 
+                    ? 'Approval Pending' 
+                    : caseDetails.deviationApproval.status === 'approved'
+                    ? 'Approved'
+                    : 'Rejected'}
+                </span>
+              )}
             </div>
             <p className="text-muted-foreground text-sm mt-1">Case #{caseDetails.id}</p>
           </div>
@@ -226,6 +280,77 @@ const CaseDetail = () => {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          
+          {caseDetails.deviationApproval?.isRequired && 
+           caseDetails.deviationApproval.status === 'pending' && (
+            <Dialog open={isDeviationDialogOpen} onOpenChange={setIsDeviationDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="mr-2">
+                  <ShieldCheck className="h-4 w-4 mr-2" />
+                  Review Deviation
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Review Deviation Request</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={deviationForm.handleSubmit(handleDeviationApproval)} className="space-y-4 pt-4">
+                  <p className="text-sm text-muted-foreground">
+                    This case requires deviation approval due to its regulatory significance. Please review the details and provide your approval decision.
+                  </p>
+                  
+                  <FormField
+                    control={deviationForm.control}
+                    name="status"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Decision</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select decision" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="approved">Approve Deviation</SelectItem>
+                            <SelectItem value="rejected">Reject Deviation</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={deviationForm.control}
+                    name="comments"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Comments</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Add comments or justification for your decision" 
+                            {...field} 
+                            rows={3} 
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <DialogFooter className="pt-4">
+                    <DialogClose asChild>
+                      <Button type="button" variant="outline">Cancel</Button>
+                    </DialogClose>
+                    <Button type="submit">Submit Decision</Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          )}
+          
           <Button>
             Edit Case
           </Button>
@@ -238,6 +363,9 @@ const CaseDetail = () => {
             <TabsTrigger value="documents">Documents</TabsTrigger>
             <TabsTrigger value="comments">Comments</TabsTrigger>
             <TabsTrigger value="history">History</TabsTrigger>
+            {caseDetails.deviationApproval?.isRequired && (
+              <TabsTrigger value="deviation">Deviation</TabsTrigger>
+            )}
           </TabsList>
           
           <TabsContent value="details" className="animate-fade-in">
@@ -527,6 +655,86 @@ const CaseDetail = () => {
               </div>
             </div>
           </TabsContent>
+          
+          {caseDetails.deviationApproval?.isRequired && (
+            <TabsContent value="deviation" className="animate-fade-in">
+              <div className="glassmorphism rounded-xl p-6">
+                <h2 className="text-xl font-medium mb-4">Deviation Approval</h2>
+                
+                <div className="mb-6">
+                  <div className={`p-4 rounded-lg border ${
+                    caseDetails.deviationApproval.status === 'pending'
+                      ? 'bg-amber-50 border-amber-200'
+                      : caseDetails.deviationApproval.status === 'approved'
+                      ? 'bg-green-50 border-green-200'
+                      : 'bg-red-50 border-red-200'
+                  }`}>
+                    <div className="flex items-center mb-3">
+                      {caseDetails.deviationApproval.status === 'pending' ? (
+                        <AlertTriangle className="h-5 w-5 text-amber-500 mr-2" />
+                      ) : caseDetails.deviationApproval.status === 'approved' ? (
+                        <ShieldCheck className="h-5 w-5 text-green-500 mr-2" />
+                      ) : (
+                        <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
+                      )}
+                      <h3 className="text-sm font-semibold">
+                        {caseDetails.deviationApproval.status === 'pending'
+                          ? 'Pending Approval'
+                          : caseDetails.deviationApproval.status === 'approved'
+                          ? 'Deviation Approved'
+                          : 'Deviation Rejected'
+                        }
+                      </h3>
+                    </div>
+                    
+                    <div className="space-y-3 text-sm">
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="text-muted-foreground">Status:</div>
+                        <div className="col-span-2 font-medium capitalize">
+                          {caseDetails.deviationApproval.status}
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="text-muted-foreground">Assigned to:</div>
+                        <div className="col-span-2">
+                          {caseDetails.deviationApproval.approver || 'Unassigned'}
+                        </div>
+                      </div>
+                      
+                      {caseDetails.deviationApproval.approvalDate && (
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="text-muted-foreground">Review date:</div>
+                          <div className="col-span-2">
+                            {caseDetails.deviationApproval.approvalDate}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {caseDetails.deviationApproval.comments && (
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="text-muted-foreground">Comments:</div>
+                          <div className="col-span-2">
+                            {caseDetails.deviationApproval.comments}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                {caseDetails.deviationApproval.status === 'pending' && (
+                  <Button
+                    onClick={() => setIsDeviationDialogOpen(true)}
+                    className="w-full md:w-auto"
+                  >
+                    <ShieldCheck className="h-4 w-4 mr-2" />
+                    Review Deviation Request
+                  </Button>
+                )}
+              </div>
+            </TabsContent>
+          )}
         </Tabs>
       </main>
     </div>
