@@ -4,62 +4,64 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Calendar } from '@/components/ui/calendar';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import DocumentAttachment from '@/components/DocumentAttachment';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Header from '@/components/Header';
-import { CalendarIcon, ChevronLeft, SaveIcon } from 'lucide-react';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useCases } from '@/context/CaseContext';
+import { format } from 'date-fns';
 
 const CreateCase = () => {
   const navigate = useNavigate();
+  const { addCase } = useCases();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     department: '',
-    caseOwner: '',
-    caseAssignee: '',
-    priority: '',
+    owner: '',
+    priority: 'medium',
+    dueDate: ''
   });
-  const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
 
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSelectChange = (name: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate required fields
-    if (!formData.title || !formData.description || !formData.department || !dueDate) {
-      toast.error('Please fill in all required fields');
+    // Validate form
+    if (!formData.title || !formData.description || !formData.department) {
+      toast.error('Please fill out all required fields');
       return;
     }
+
+    // Create the new case
+    const today = new Date();
+    const formattedDate = format(today, 'MMM d');
     
-    // In a real application, you would submit the form data to an API
+    // Add the case using our context
+    addCase({
+      title: formData.title,
+      description: formData.description,
+      status: 'new',
+      owner: formData.owner || 'Unassigned',
+      department: formData.department,
+      dueDate: formData.dueDate ? format(new Date(formData.dueDate), 'MMM d') : `${formattedDate} (Today)`,
+      comments: 0,
+      attachments: 0,
+      tasks: 0,
+      completedTasks: 0
+    });
     
-    toast.success('Case created successfully!');
-    setTimeout(() => navigate('/'), 1500);
+    toast.success('Case created successfully');
+    
+    // Navigate back to the main dashboard
+    navigate('/');
   };
 
   return (
@@ -67,177 +69,136 @@ const CreateCase = () => {
       <Header />
       
       <main className="container py-8 px-4 max-w-3xl mx-auto">
-        <Button 
-          variant="ghost" 
-          className="mb-6"
-          onClick={() => navigate(-1)}
-        >
-          <ChevronLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
+        <div className="mb-8">
+          <h1 className="text-3xl font-semibold mb-2">Create New Case</h1>
+          <p className="text-muted-foreground">Create a new compliance case to track and manage</p>
+        </div>
         
-        <h1 className="text-3xl font-semibold mb-6">Create New Case</h1>
-        
-        <form onSubmit={handleSubmit} className="space-y-6 animate-fade-in">
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="title" className="block text-sm font-medium mb-1">
-                Case Title <span className="text-destructive">*</span>
+        <div className="glassmorphism rounded-xl p-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <label htmlFor="title" className="text-sm font-medium">
+                Case Title <span className="text-red-500">*</span>
               </label>
-              <Input
-                id="title"
+              <Input 
+                id="title" 
                 name="title"
-                placeholder="Enter case title"
+                placeholder="Enter case title" 
                 value={formData.title}
                 onChange={handleInputChange}
                 required
-                className="w-full"
               />
             </div>
             
-            <div>
-              <label htmlFor="description" className="block text-sm font-medium mb-1">
-                Case Description <span className="text-destructive">*</span>
+            <div className="space-y-2">
+              <label htmlFor="description" className="text-sm font-medium">
+                Description <span className="text-red-500">*</span>
               </label>
-              <Textarea
-                id="description"
+              <Textarea 
+                id="description" 
                 name="description"
-                placeholder="Enter detailed description of the case"
+                placeholder="Enter case description" 
                 value={formData.description}
                 onChange={handleInputChange}
                 required
-                className="min-h-[120px]"
+                rows={4}
               />
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="department" className="block text-sm font-medium mb-1">
-                  Department <span className="text-destructive">*</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label htmlFor="department" className="text-sm font-medium">
+                  Department <span className="text-red-500">*</span>
                 </label>
                 <Select 
-                  value={formData.department}
+                  value={formData.department} 
                   onValueChange={(value) => handleSelectChange('department', value)}
+                  required
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger>
                     <SelectValue placeholder="Select department" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="compliance">Compliance</SelectItem>
-                    <SelectItem value="risk">Risk</SelectItem>
-                    <SelectItem value="audit">Audit</SelectItem>
-                    <SelectItem value="operations">Operations</SelectItem>
-                    <SelectItem value="legal">Legal</SelectItem>
+                    <SelectItem value="Compliance">Compliance</SelectItem>
+                    <SelectItem value="Risk">Risk</SelectItem>
+                    <SelectItem value="Legal">Legal</SelectItem>
+                    <SelectItem value="Operations">Operations</SelectItem>
+                    <SelectItem value="Audit">Audit</SelectItem>
+                    <SelectItem value="Training">Training</SelectItem>
+                    <SelectItem value="Customer Service">Customer Service</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               
-              <div>
-                <label htmlFor="dueDate" className="block text-sm font-medium mb-1">
-                  Due Date <span className="text-destructive">*</span>
-                </label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !dueDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dueDate ? format(dueDate, "PPP") : <span>Select date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={dueDate}
-                      onSelect={setDueDate}
-                      initialFocus
-                      className="pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              
-              <div>
-                <label htmlFor="caseOwner" className="block text-sm font-medium mb-1">
+              <div className="space-y-2">
+                <label htmlFor="owner" className="text-sm font-medium">
                   Case Owner
                 </label>
                 <Select 
-                  value={formData.caseOwner}
-                  onValueChange={(value) => handleSelectChange('caseOwner', value)}
+                  value={formData.owner} 
+                  onValueChange={(value) => handleSelectChange('owner', value)}
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger>
                     <SelectValue placeholder="Select case owner" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="jane">Jane Smith</SelectItem>
-                    <SelectItem value="michael">Michael Chen</SelectItem>
-                    <SelectItem value="david">David Lee</SelectItem>
-                    <SelectItem value="sarah">Sarah Johnson</SelectItem>
+                    <SelectItem value="Jane Smith">Jane Smith</SelectItem>
+                    <SelectItem value="Michael Chen">Michael Chen</SelectItem>
+                    <SelectItem value="Sarah Johnson">Sarah Johnson</SelectItem>
+                    <SelectItem value="David Lee">David Lee</SelectItem>
+                    <SelectItem value="Emily Wang">Emily Wang</SelectItem>
+                    <SelectItem value="Robert Kim">Robert Kim</SelectItem>
+                    <SelectItem value="Olivia Martinez">Olivia Martinez</SelectItem>
+                    <SelectItem value="William Taylor">William Taylor</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               
-              <div>
-                <label htmlFor="caseAssignee" className="block text-sm font-medium mb-1">
-                  Case Assignee
-                </label>
-                <Select 
-                  value={formData.caseAssignee}
-                  onValueChange={(value) => handleSelectChange('caseAssignee', value)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select case assignee" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="jane">Jane Smith</SelectItem>
-                    <SelectItem value="michael">Michael Chen</SelectItem>
-                    <SelectItem value="david">David Lee</SelectItem>
-                    <SelectItem value="sarah">Sarah Johnson</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <label htmlFor="priority" className="block text-sm font-medium mb-1">
+              <div className="space-y-2">
+                <label htmlFor="priority" className="text-sm font-medium">
                   Priority
                 </label>
                 <Select 
-                  value={formData.priority}
+                  value={formData.priority} 
                   onValueChange={(value) => handleSelectChange('priority', value)}
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger>
                     <SelectValue placeholder="Select priority" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
                     <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="dueDate" className="text-sm font-medium">
+                  Due Date
+                </label>
+                <Input 
+                  id="dueDate" 
+                  name="dueDate"
+                  type="date" 
+                  value={formData.dueDate}
+                  onChange={handleInputChange}
+                />
+              </div>
             </div>
-          </div>
-          
-          <DocumentAttachment />
-          
-          <div className="flex justify-end space-x-3 pt-6">
-            <Button 
-              type="button" 
-              variant="outline"
-              onClick={() => navigate('/')}
-            >
-              Cancel
-            </Button>
-            <Button type="submit">
-              <SaveIcon className="h-4 w-4 mr-2" />
-              Create Case
-            </Button>
-          </div>
-        </form>
+            
+            <div className="flex justify-end space-x-3 pt-4">
+              <Button 
+                type="button" 
+                variant="outline"
+                onClick={() => navigate('/')}
+              >
+                Cancel
+              </Button>
+              <Button type="submit">Create Case</Button>
+            </div>
+          </form>
+        </div>
       </main>
     </div>
   );

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -12,9 +11,10 @@ import Header from '@/components/Header';
 import TaskItem from '@/components/TaskItem';
 import DocumentAttachment from '@/components/DocumentAttachment';
 import CommentSection from '@/components/CommentSection';
-import { AlertCircle, Calendar, ChevronLeft, Clock, MessageSquare, Paperclip, Plus, User, CheckCircle2, XCircle } from 'lucide-react';
+import { AlertCircle, Calendar, ChevronLeft, Clock, MessageSquare, Paperclip, Plus, User, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
+import { useCases } from '@/context/CaseContext';
 
 type TaskStatus = 'pending' | 'inprogress' | 'completed';
 
@@ -30,7 +30,6 @@ type Task = {
   attachmentsCount: number;
 };
 
-// Sample tasks for demonstration
 const sampleTasks: Task[] = [
   {
     id: '1',
@@ -89,6 +88,20 @@ type TaskFormValues = {
 const CaseDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { getCaseById } = useCases();
+  const caseDetails = getCaseById(id || '') || {
+    id: id || '1',
+    title: 'Case Not Found',
+    description: 'The requested case could not be found.',
+    status: 'inprogress' as const,
+    owner: 'Unknown',
+    department: 'Unknown',
+    createdBy: 'Unknown',
+    createdDate: 'Unknown',
+    dueDate: 'Unknown',
+    priority: 'Medium'
+  };
+  
   const [tasks, setTasks] = useState<Task[]>(sampleTasks);
   const [activeTab, setActiveTab] = useState('details');
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
@@ -104,20 +117,6 @@ const CaseDetail = () => {
     }
   });
 
-  // In a real application, you would fetch the case details using the ID
-  const caseDetails = {
-    id: id || '1',
-    title: 'Regulatory Compliance Review - Q2',
-    description: 'Quarterly review of regulatory compliance standards across all departments. Ensure all new regulations are properly implemented and documented according to the latest guidelines.',
-    status: 'inprogress',
-    owner: 'Jane Smith',
-    department: 'Compliance',
-    createdBy: 'Michael Chen',
-    createdDate: 'July 25, 2023',
-    dueDate: 'August 15, 2023',
-    priority: 'High'
-  };
-
   const handleTaskStatusChange = (taskId: string, newStatus: TaskStatus) => {
     setTasks(
       tasks.map(task => 
@@ -131,10 +130,8 @@ const CaseDetail = () => {
   };
 
   const handleCreateTask = (data: TaskFormValues) => {
-    // Generate a simple ID (in a real app, this would be from a server)
     const newTaskId = `task-${Date.now()}`;
     
-    // Create the new task
     const newTask: Task = {
       id: newTaskId,
       title: data.title,
@@ -147,20 +144,16 @@ const CaseDetail = () => {
       attachmentsCount: 0
     };
     
-    // Add the new task to the tasks array
     setTasks([...tasks, newTask]);
     
-    // Close the dialog and show a success message
     setIsCreateTaskOpen(false);
     taskForm.reset();
     toast.success('Task created successfully');
   };
 
   const handleCloseCase = () => {
-    // In a real app, this would make an API call to update the case status
     toast.success('Case closed successfully');
     setIsCloseCaseOpen(false);
-    // Redirect to cases list after a short delay
     setTimeout(() => navigate('/'), 1500);
   };
 
@@ -186,43 +179,51 @@ const CaseDetail = () => {
                 className={`ml-4 text-xs px-2.5 py-1 rounded-full 
                   ${caseDetails.status === 'inprogress' 
                     ? 'bg-case-inprogress text-case-inprogress-foreground' 
-                    : 'bg-blue-100 text-blue-800'}`}
+                    : caseDetails.status === 'new'
+                    ? 'bg-case-new text-case-new-foreground'
+                    : caseDetails.status === 'pending'
+                    ? 'bg-case-pending text-case-pending-foreground'
+                    : 'bg-case-completed text-case-completed-foreground'}`}
               >
-                In Progress
+                {caseDetails.status === 'inprogress' 
+                  ? 'In Progress' 
+                  : caseDetails.status === 'new'
+                  ? 'New'
+                  : caseDetails.status === 'pending'
+                  ? 'Pending'
+                  : 'Completed'}
               </span>
             </div>
             <p className="text-muted-foreground text-sm mt-1">Case #{caseDetails.id}</p>
           </div>
           
-          <div className="flex space-x-2">
-            <Dialog open={isCloseCaseOpen} onOpenChange={setIsCloseCaseOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline">
-                  Close Case
+          <Dialog open={isCloseCaseOpen} onOpenChange={setIsCloseCaseOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                Close Case
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Close this case?</DialogTitle>
+              </DialogHeader>
+              <p className="py-4">
+                Are you sure you want to close this case? This action will mark the case as complete and notify all relevant stakeholders.
+              </p>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">Cancel</Button>
+                </DialogClose>
+                <Button onClick={handleCloseCase} className="bg-green-600 hover:bg-green-700">
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Confirm Close
                 </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Close this case?</DialogTitle>
-                </DialogHeader>
-                <p className="py-4">
-                  Are you sure you want to close this case? This action will mark the case as complete and notify all relevant stakeholders.
-                </p>
-                <DialogFooter>
-                  <DialogClose asChild>
-                    <Button variant="outline">Cancel</Button>
-                  </DialogClose>
-                  <Button onClick={handleCloseCase} className="bg-green-600 hover:bg-green-700">
-                    <CheckCircle2 className="mr-2 h-4 w-4" />
-                    Confirm Close
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-            <Button>
-              Edit Case
-            </Button>
-          </div>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          <Button>
+            Edit Case
+          </Button>
         </div>
         
         <Tabs defaultValue="details" className="w-full" onValueChange={setActiveTab}>
