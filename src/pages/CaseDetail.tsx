@@ -61,17 +61,16 @@ const requestApprovalSchema = z.object({
 const processApprovalSchema = z.object({
   action: z.enum(['approve', 'reject', 'escalate']),
   comments: z.string().min(10, "Comments must be at least 10 characters"),
-  escalateTo: z.string().optional().refine(
-    (val, ctx) => {
-      if (ctx.data.action === 'escalate' && (!val || val.length < 2)) {
-        return false;
-      }
-      return true;
-    },
-    {
-      message: "Escalation recipient is required when escalating",
+  escalateTo: z.string().optional().superRefine((val, ctx) => {
+    if (ctx.parent.action === 'escalate' && (!val || val.length < 2)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Escalation recipient is required when escalating"
+      });
+      return false;
     }
-  )
+    return true;
+  })
 });
 
 const finalApprovalSchema = z.object({

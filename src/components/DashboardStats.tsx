@@ -1,113 +1,124 @@
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Case } from '@/context/CaseContext';
 
-import { ArrowUp, CheckCircle, Clock, FileClock, FileWarning } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { useCases } from '@/context/CaseContext';
-
-type StatCardProps = {
-  title: string;
-  value: number;
-  change: number;
-  icon: React.ReactNode;
-  bgColor: string;
-  textColor: string;
+interface DashboardStatsProps {
+  cases: Case[];
 }
 
-const StatCard = ({ title, value, change, icon, bgColor, textColor }: StatCardProps) => (
-  <div className="glassmorphism rounded-xl p-6 flex flex-col space-y-4 glass-card-hover transition-all duration-300">
-    <div className="flex justify-between items-start">
-      <div>
-        <p className="text-sm font-medium text-muted-foreground">{title}</p>
-        <h3 className={`text-2xl font-semibold mt-1 ${textColor}`}>{value}</h3>
-      </div>
-      <div className={`p-3 rounded-full ${bgColor}`}>
-        {icon}
-      </div>
-    </div>
-    <div className="flex items-center text-xs font-medium">
-      <ArrowUp className="h-3 w-3 mr-1 text-green-500" />
-      <span className="text-green-500">{change}%</span>
-      <span className="text-muted-foreground ml-1">from last month</span>
-    </div>
-  </div>
-);
-
-const DashboardStats = () => {
-  const { cases } = useCases();
-  const [stats, setStats] = useState({
-    total: 0,
-    active: 0,
-    pending: 0,
-    completed: 0,
-  });
-
-  // Calculate stats based on actual case data
-  useEffect(() => {
-    // Count cases by status
-    const active = cases.filter(c => c.status === 'inprogress').length;
-    const pending = cases.filter(c => c.status === 'pending').length;
-    const completed = cases.filter(c => c.status === 'completed').length;
-    const newCases = cases.filter(c => c.status === 'new').length;
-    const total = cases.length;
-
-    // Animation for counting up
-    const animateValue = (
-      start: number,
-      end: number,
-      duration: number,
-      setter: (value: number) => void
-    ) => {
-      let startTimestamp: number | null = null;
-      const step = (timestamp: number) => {
-        if (!startTimestamp) startTimestamp = timestamp;
-        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-        setter(Math.floor(progress * (end - start) + start));
-        if (progress < 1) {
-          window.requestAnimationFrame(step);
-        }
-      };
-      window.requestAnimationFrame(step);
-    };
-
-    animateValue(0, total, 1500, (value) => setStats(prev => ({ ...prev, total: value })));
-    animateValue(0, active + newCases, 1800, (value) => setStats(prev => ({ ...prev, active: value })));
-    animateValue(0, pending, 2000, (value) => setStats(prev => ({ ...prev, pending: value })));
-    animateValue(0, completed, 2200, (value) => setStats(prev => ({ ...prev, completed: value })));
-  }, [cases]);
+const DashboardStats: React.FC<DashboardStatsProps> = ({ cases }) => {
+  // Calculate statistics
+  const totalCases = cases.length;
+  const newCases = cases.filter(c => c.status === 'new').length;
+  const inProgressCases = cases.filter(c => c.status === 'inprogress').length;
+  const completedCases = cases.filter(c => c.status === 'completed').length;
+  
+  // Calculate percentage changes (placeholder values - in a real app you'd compare with previous period)
+  const newCasesChange = 12.5;
+  const inProgressCasesChange = -4.2;
+  const completedCasesChange = 8.7;
+  const totalCasesChange = 5.3;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 animate-slide-in">
-      <StatCard
-        title="Total Cases"
-        value={stats.total}
-        change={12}
-        icon={<FileClock className="h-6 w-6 text-primary" />}
-        bgColor="bg-blue-50"
-        textColor="text-primary"
-      />
-      <StatCard
-        title="Active Cases"
-        value={stats.active}
-        change={8}
-        icon={<Clock className="h-6 w-6 text-green-600" />}
-        bgColor="bg-green-50"
-        textColor="text-green-600"
-      />
-      <StatCard
-        title="Pending Approval"
-        value={stats.pending}
-        change={3}
-        icon={<FileWarning className="h-6 w-6 text-orange-600" />}
-        bgColor="bg-orange-50"
-        textColor="text-orange-600"
-      />
-      <StatCard
-        title="Completed"
-        value={stats.completed}
-        change={15}
-        icon={<CheckCircle className="h-6 w-6 text-blue-600" />}
-        bgColor="bg-blue-50"
-        textColor="text-blue-600"
-      />
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Total Cases</CardTitle>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            className="h-4 w-4 text-muted-foreground"
+          >
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+          </svg>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{totalCases}</div>
+          <p className="text-xs text-muted-foreground">
+            {totalCasesChange > 0 ? '+' : ''}{totalCasesChange}% from last month
+          </p>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">New Cases</CardTitle>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            className="h-4 w-4 text-muted-foreground"
+          >
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{newCases}</div>
+          <p className="text-xs text-muted-foreground">
+            {newCasesChange > 0 ? '+' : ''}{newCasesChange}% from last month
+          </p>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">In Progress</CardTitle>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            className="h-4 w-4 text-muted-foreground"
+          >
+            <rect width="20" height="14" x="2" y="5" rx="2" />
+            <path d="M2 10h20" />
+          </svg>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{inProgressCases}</div>
+          <p className="text-xs text-muted-foreground">
+            {inProgressCasesChange > 0 ? '+' : ''}{inProgressCasesChange}% from last month
+          </p>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Completed</CardTitle>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            className="h-4 w-4 text-muted-foreground"
+          >
+            <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+          </svg>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{completedCases}</div>
+          <p className="text-xs text-muted-foreground">
+            {completedCasesChange > 0 ? '+' : ''}{completedCasesChange}% from last month
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 };

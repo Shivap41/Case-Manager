@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useCases } from '@/context/CaseContext';
+import { useCases, Case } from '@/context/CaseContext';
 import Header from '@/components/Header';
 import DashboardStats from '@/components/DashboardStats';
 import CaseFilters from '@/components/CaseFilters';
@@ -16,6 +16,15 @@ type FilterValues = {
   dateRange: { from?: Date; to?: Date };
   search: string;
 };
+
+// Define props interfaces for the components that are missing them
+interface DashboardStatsProps {
+  cases: Case[];
+}
+
+interface CaseFiltersProps {
+  onFilterChange: (filters: FilterValues) => void;
+}
 
 const Index = () => {
   const { cases } = useCases();

@@ -16,7 +16,7 @@ export type Task = {
   attachmentsCount: number;
 };
 
-type TaskItemProps = {
+export type TaskItemProps = {
   id?: string;
   title?: string;
   description?: string;
@@ -79,7 +79,7 @@ const getStatusIcon = (status: TaskStatus) => {
 
 const TaskItem = (props: TaskItemProps) => {
   // Use either directly passed props or extract from task object
-  const task = props.task || {};
+  const task = props.task || {} as Task;
   const id = props.id || task.id || '';
   const title = props.title || task.title || '';
   const description = props.description || task.description || '';
@@ -87,8 +87,8 @@ const TaskItem = (props: TaskItemProps) => {
   const priority = props.priority || task.priority || 'low';
   const dueDate = props.dueDate || task.dueDate || '';
   const assignee = props.assignee || task.assignee || '';
-  const commentsCount = props.commentsCount || task.commentsCount || 0;
-  const attachmentsCount = props.attachmentsCount || task.attachmentsCount || 0;
+  const commentsCount = props.commentsCount ?? task.commentsCount ?? 0;
+  const attachmentsCount = props.attachmentsCount ?? task.attachmentsCount ?? 0;
   const onStatusChange = props.onStatusChange;
   const onClick = props.onClick;
 
