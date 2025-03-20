@@ -1,4 +1,5 @@
 
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -76,7 +77,7 @@ const CreateCase = () => {
   });
 
   // Update the validation rules when requiresDeviation changes
-  React.useEffect(() => {
+  useEffect(() => {
     const requiresDeviation = form.watch("requiresDeviation");
     const currentComments = form.watch("deviationComments");
     
