@@ -2,7 +2,8 @@
 import { PlusCircle } from 'lucide-react';
 import CaseCard from './CaseCard';
 import { Button } from '@/components/ui/button';
-import { useCases } from '@/context/CaseContext';
+import { useCases, Case } from '@/context/CaseContext';
+import { Badge } from '@/components/ui/badge';
 
 const KanbanBoard = () => {
   const { cases } = useCases();
@@ -11,6 +12,23 @@ const KanbanBoard = () => {
   const inProgressCases = cases.filter(c => c.status === 'inprogress');
   const pendingCases = cases.filter(c => c.status === 'pending');
   const completedCases = cases.filter(c => c.status === 'completed');
+
+  // Custom render for cases that highlights deviation approvals
+  const renderCase = (caseItem: Case) => {
+    const hasDeviationApproval = caseItem.deviationApproval?.isRequired;
+    return (
+      <div key={caseItem.id} className="relative">
+        <CaseCard {...caseItem} />
+        {hasDeviationApproval && (
+          <Badge 
+            className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600"
+          >
+            Deviation
+          </Badge>
+        )}
+      </div>
+    );
+  };
 
   const KanbanColumn = ({ title, cases, className }: { title: string, cases: ReturnType<typeof useCases>['cases'], className?: string }) => (
     <div className={`flex flex-col h-full ${className}`}>
@@ -22,9 +40,7 @@ const KanbanBoard = () => {
       </div>
       <div className="bg-secondary/50 rounded-xl p-4 flex-grow overflow-y-auto max-h-[calc(100vh-240px)]">
         <div className="flex flex-col gap-4">
-          {cases.map(caseItem => (
-            <CaseCard key={caseItem.id} {...caseItem} />
-          ))}
+          {cases.map(caseItem => renderCase(caseItem))}
           {cases.length === 0 && (
             <div className="text-center py-8 text-muted-foreground text-sm">
               No cases in this status

@@ -83,7 +83,7 @@ const CreateCase = () => {
         month: "long",
         day: "numeric",
       }),
-      createdBy: "Current User", // In a real app, this would be the logged-in user
+      createdBy: "Current User",
       deviationApproval: data.requiresDeviation ? {
         isRequired: true,
         status: 'pending',
@@ -94,6 +94,11 @@ const CreateCase = () => {
     addCase(newCase);
     
     toast.success("Case created successfully!");
+    navigate("/");
+  };
+
+  const handleCancel = () => {
+    toast.info("Case creation cancelled");
     navigate("/");
   };
 
@@ -269,7 +274,12 @@ const CreateCase = () => {
             />
           )}
 
-          <Button type="submit">Create Case</Button>
+          <div className="flex items-center justify-end space-x-4 pt-4">
+            <Button type="button" variant="outline" onClick={handleCancel}>
+              Cancel
+            </Button>
+            <Button type="submit">Create Case</Button>
+          </div>
         </form>
       </Form>
     </div>

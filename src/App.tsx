@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import CreateCase from "./pages/CreateCase";
 import CaseDetail from "./pages/CaseDetail";
+import Tasks from "./pages/Tasks";
 
 const queryClient = new QueryClient();
 
@@ -23,6 +24,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/create-case" element={<CreateCase />} />
             <Route path="/case/:id" element={<CaseDetail />} />
+            <Route path="/tasks" element={<Tasks />} />
             {/* Add a redirect for the /cases route to the home page */}
             <Route path="/cases" element={<Navigate to="/" replace />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

@@ -1,6 +1,7 @@
 
 import { ArrowUp, CheckCircle, Clock, FileClock, FileWarning } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { useCases } from '@/context/CaseContext';
 
 type StatCardProps = {
   title: string;
@@ -31,6 +32,7 @@ const StatCard = ({ title, value, change, icon, bgColor, textColor }: StatCardPr
 );
 
 const DashboardStats = () => {
+  const { cases } = useCases();
   const [stats, setStats] = useState({
     total: 0,
     active: 0,
@@ -38,8 +40,16 @@ const DashboardStats = () => {
     completed: 0,
   });
 
-  // Animation for counting up
+  // Calculate stats based on actual case data
   useEffect(() => {
+    // Count cases by status
+    const active = cases.filter(c => c.status === 'inprogress').length;
+    const pending = cases.filter(c => c.status === 'pending').length;
+    const completed = cases.filter(c => c.status === 'completed').length;
+    const newCases = cases.filter(c => c.status === 'new').length;
+    const total = cases.length;
+
+    // Animation for counting up
     const animateValue = (
       start: number,
       end: number,
@@ -58,12 +68,11 @@ const DashboardStats = () => {
       window.requestAnimationFrame(step);
     };
 
-    // Mock data - in a real app this would come from an API
-    animateValue(0, 126, 1500, (value) => setStats(prev => ({ ...prev, total: value })));
-    animateValue(0, 42, 1800, (value) => setStats(prev => ({ ...prev, active: value })));
-    animateValue(0, 18, 2000, (value) => setStats(prev => ({ ...prev, pending: value })));
-    animateValue(0, 66, 2200, (value) => setStats(prev => ({ ...prev, completed: value })));
-  }, []);
+    animateValue(0, total, 1500, (value) => setStats(prev => ({ ...prev, total: value })));
+    animateValue(0, active + newCases, 1800, (value) => setStats(prev => ({ ...prev, active: value })));
+    animateValue(0, pending, 2000, (value) => setStats(prev => ({ ...prev, pending: value })));
+    animateValue(0, completed, 2200, (value) => setStats(prev => ({ ...prev, completed: value })));
+  }, [cases]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 animate-slide-in">
