@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -12,10 +11,15 @@ import Header from '@/components/Header';
 import TaskItem from '@/components/TaskItem';
 import DocumentAttachment from '@/components/DocumentAttachment';
 import CommentSection from '@/components/CommentSection';
-import { AlertCircle, Calendar, ChevronLeft, Clock, MessageSquare, Paperclip, Plus, User, CheckCircle2, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { 
+  AlertCircle, Calendar, ChevronLeft, Clock, MessageSquare, Paperclip, Plus, User, 
+  CheckCircle2, AlertTriangle, ShieldCheck, ArrowUp, ThumbsUp, ThumbsDown, Send, X
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
-import { useCases, Case, DeviationApproval } from '@/context/CaseContext';
+import { useCases, Case, DeviationApproval, NormalApproval } from '@/context/CaseContext';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 
 type TaskStatus = 'pending' | 'inprogress' | 'completed';
 
@@ -39,10 +43,35 @@ type TaskFormValues = {
   dueDate: string;
 };
 
-type DeviationApprovalFormValues = {
-  status: 'approved' | 'rejected';
-  comments: string;
-};
+// Schema for requesting approval
+const requestApprovalSchema = z.object({
+  approvalType: z.enum(['normal', 'deviation']),
+  approver: z.string().min(2, "Approver name is required"),
+  comments: z.string().min(10, "Comments must be at least 10 characters")
+});
+
+// Schema for processing approval
+const processApprovalSchema = z.object({
+  action: z.enum(['approve', 'reject', 'escalate']),
+  comments: z.string().min(10, "Comments must be at least 10 characters"),
+  escalateTo: z.string().optional().refine(
+    (val, ctx) => {
+      if (ctx.data.action === 'escalate' && (!val || val.length < 2)) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: "Escalation recipient is required when escalating",
+    }
+  )
+});
+
+// Schema for final approval
+const finalApprovalSchema = z.object({
+  action: z.enum(['approve', 'reject']),
+  comments: z.string().min(10, "Comments must be at least 10 characters")
+});
 
 const sampleTasks: Task[] = [
   {
@@ -94,7 +123,7 @@ const sampleTasks: Task[] = [
 const CaseDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getCaseById, updateDeviationApproval } = useCases();
+  const { getCaseById, processApproval, processFinalApproval, requestApproval } = useCases();
   const caseDetails = getCaseById(id || '') || {
     id: id || '1',
     title: 'Case Not Found',
@@ -117,7 +146,11 @@ const CaseDetail = () => {
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
   const [isCloseCaseOpen, setIsCloseCaseOpen] = useState(false);
   const [isDeviationDialogOpen, setIsDeviationDialogOpen] = useState(false);
-
+  const [isRequestApprovalOpen, setIsRequestApprovalOpen] = useState(false);
+  const [isProcessApprovalOpen, setIsProcessApprovalOpen] = useState(false);
+  const [isFinalApprovalOpen, setIsFinalApprovalOpen] = useState(false);
+  
+  // Form setup
   const taskForm = useForm<TaskFormValues>({
     defaultValues: {
       title: '',
@@ -128,13 +161,48 @@ const CaseDetail = () => {
     }
   });
 
-  const deviationForm = useForm<DeviationApprovalFormValues>({
+  const requestApprovalForm = useForm<z.infer<typeof requestApprovalSchema>>({
+    resolver: zodResolver(requestApprovalSchema),
     defaultValues: {
-      status: 'approved',
+      approvalType: 'normal',
+      approver: '',
       comments: ''
     }
   });
 
+  const processApprovalForm = useForm<z.infer<typeof processApprovalSchema>>({
+    resolver: zodResolver(processApprovalSchema),
+    defaultValues: {
+      action: 'approve',
+      comments: '',
+      escalateTo: ''
+    }
+  });
+
+  const finalApprovalForm = useForm<z.infer<typeof finalApprovalSchema>>({
+    resolver: zodResolver(finalApprovalSchema),
+    defaultValues: {
+      action: 'approve',
+      comments: ''
+    }
+  });
+
+  // Determine if user is a case owner
+  const isCaseOwner = true; // In a real app, you would check against the logged-in user
+  
+  // Determine if user is an approver
+  const isFirstLevelApprover = caseDetails.pendingApprovalType && 
+    (caseDetails.pendingApprovalType === 'normal' 
+      ? caseDetails.normalApproval?.approver === 'Current User'
+      : caseDetails.deviationApproval?.approver === 'Current User');
+
+  const isSecondLevelApprover = caseDetails.pendingApprovalType && 
+    caseDetails.currentApprovalLevel === 'secondLevel' &&
+    (caseDetails.pendingApprovalType === 'normal'
+      ? caseDetails.normalApproval?.escalatedTo === 'Current User'
+      : caseDetails.deviationApproval?.escalatedTo === 'Current User');
+
+  // Handlers
   const handleTaskStatusChange = (taskId: string, newStatus: TaskStatus) => {
     setTasks(
       tasks.map(task => 
@@ -175,33 +243,52 @@ const CaseDetail = () => {
     setTimeout(() => navigate('/'), 1500);
   };
 
-  const handleDeviationApproval = (data: DeviationApprovalFormValues) => {
+  const handleRequestApproval = (data: z.infer<typeof requestApprovalSchema>) => {
     if (!id) return;
 
-    if (!data.comments || data.comments.trim() === '') {
-      deviationForm.setError('comments', {
-        type: 'manual',
-        message: 'Comments are required for deviation approval decisions'
-      });
-      return;
-    }
-
-    const approval: DeviationApproval = {
-      isRequired: true,
-      status: data.status,
-      approver: 'Current User',
-      approvalDate: new Date().toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      }),
-      comments: data.comments
-    };
-
-    updateDeviationApproval(id, approval);
-    setIsDeviationDialogOpen(false);
-    toast.success(`Deviation ${data.status === 'approved' ? 'approved' : 'rejected'} successfully`);
+    requestApproval(id, data.approvalType, data.approver, data.comments);
+    setIsRequestApprovalOpen(false);
+    toast.success(`${data.approvalType === 'normal' ? 'Normal' : 'Deviation'} approval requested successfully`);
   };
+
+  const handleProcessApproval = (data: z.infer<typeof processApprovalSchema>) => {
+    if (!id) return;
+
+    processApproval(id, data.action, data.comments, data.action === 'escalate' ? data.escalateTo : undefined);
+    setIsProcessApprovalOpen(false);
+    
+    const actionText = data.action === 'approve' 
+      ? 'approved' 
+      : data.action === 'reject'
+      ? 'rejected'
+      : 'escalated';
+    
+    toast.success(`Case ${actionText} successfully`);
+  };
+
+  const handleFinalApproval = (data: z.infer<typeof finalApprovalSchema>) => {
+    if (!id) return;
+
+    processFinalApproval(id, data.action, data.comments);
+    setIsFinalApprovalOpen(false);
+    
+    const actionText = data.action === 'approve' 
+      ? 'approved' 
+      : 'rejected';
+    
+    toast.success(`Case ${actionText} successfully`);
+  };
+
+  // Get the appropriate approval object based on the case's pending approval type
+  const getApprovalDetails = () => {
+    if (!caseDetails.pendingApprovalType) return null;
+    
+    return caseDetails.pendingApprovalType === 'normal'
+      ? caseDetails.normalApproval
+      : caseDetails.deviationApproval;
+  };
+
+  const approvalDetails = getApprovalDetails();
 
   return (
     <div className="min-h-screen bg-background">
@@ -229,6 +316,8 @@ const CaseDetail = () => {
                     ? 'bg-case-new text-case-new-foreground'
                     : caseDetails.status === 'pending'
                     ? 'bg-case-pending text-case-pending-foreground'
+                    : caseDetails.status === 'rejected'
+                    ? 'bg-red-100 text-red-800'
                     : 'bg-case-completed text-case-completed-foreground'}`}
               >
                 {caseDetails.status === 'inprogress' 
@@ -237,27 +326,35 @@ const CaseDetail = () => {
                   ? 'New'
                   : caseDetails.status === 'pending'
                   ? 'Pending'
+                  : caseDetails.status === 'rejected'
+                  ? 'Rejected'
                   : 'Completed'}
               </span>
               
-              {caseDetails.deviationApproval?.isRequired && (
+              {caseDetails.pendingApprovalType && (
                 <span 
                   className={`ml-2 text-xs px-2.5 py-1 rounded-full flex items-center
-                    ${caseDetails.deviationApproval.status === 'pending' 
+                    ${approvalDetails?.status === 'pending' 
                       ? 'bg-amber-100 text-amber-800' 
-                      : caseDetails.deviationApproval.status === 'approved'
+                      : approvalDetails?.status === 'approved' || approvalDetails?.finalDecision === 'approved'
                       ? 'bg-green-100 text-green-800'
+                      : approvalDetails?.status === 'escalated'
+                      ? 'bg-blue-100 text-blue-800'
                       : 'bg-red-100 text-red-800'}`}
                 >
-                  {caseDetails.deviationApproval.status === 'pending' 
+                  {approvalDetails?.status === 'pending' 
                     ? <AlertTriangle className="h-3 w-3 mr-1" />
-                    : caseDetails.deviationApproval.status === 'approved'
+                    : approvalDetails?.status === 'approved' || approvalDetails?.finalDecision === 'approved'
                     ? <ShieldCheck className="h-3 w-3 mr-1" />
-                    : <AlertCircle className="h-3 w-3 mr-1" />}
-                  {caseDetails.deviationApproval.status === 'pending' 
-                    ? 'Approval Pending' 
-                    : caseDetails.deviationApproval.status === 'approved'
+                    : approvalDetails?.status === 'escalated'
+                    ? <ArrowUp className="h-3 w-3 mr-1" />
+                    : <X className="h-3 w-3 mr-1" />}
+                  {approvalDetails?.status === 'pending' 
+                    ? `${caseDetails.pendingApprovalType === 'normal' ? 'Normal' : 'Deviation'} Approval Pending` 
+                    : approvalDetails?.status === 'approved' || approvalDetails?.finalDecision === 'approved'
                     ? 'Approved'
+                    : approvalDetails?.status === 'escalated'
+                    ? 'Escalated'
                     : 'Rejected'}
                 </span>
               )}
@@ -265,60 +362,143 @@ const CaseDetail = () => {
             <p className="text-muted-foreground text-sm mt-1">Case #{caseDetails.id}</p>
           </div>
           
-          <Dialog open={isCloseCaseOpen} onOpenChange={setIsCloseCaseOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline">
-                Close Case
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Close this case?</DialogTitle>
-              </DialogHeader>
-              <p className="py-4">
-                Are you sure you want to close this case? This action will mark the case as complete and notify all relevant stakeholders.
-              </p>
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button variant="outline">Cancel</Button>
-                </DialogClose>
-                <Button onClick={handleCloseCase} className="bg-green-600 hover:bg-green-700">
-                  <CheckCircle2 className="mr-2 h-4 w-4" />
-                  Confirm Close
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-          
-          {caseDetails.deviationApproval?.isRequired && 
-           caseDetails.deviationApproval.status === 'pending' && (
-            <Dialog open={isDeviationDialogOpen} onOpenChange={setIsDeviationDialogOpen}>
+          {/* Case Owner Actions */}
+          {isCaseOwner && caseDetails.status === 'inprogress' && (
+            <Dialog open={isRequestApprovalOpen} onOpenChange={setIsRequestApprovalOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" className="mr-2">
-                  <ShieldCheck className="h-4 w-4 mr-2" />
-                  Review Deviation
+                  <Send className="h-4 w-4 mr-2" />
+                  Request Approval
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Review Deviation Request</DialogTitle>
+                  <DialogTitle>Request Case Approval</DialogTitle>
                 </DialogHeader>
-                <Form {...deviationForm}>
-                  <form onSubmit={deviationForm.handleSubmit(handleDeviationApproval)} className="space-y-4 pt-4">
-                    <p className="text-sm text-muted-foreground">
-                      This case requires deviation approval due to its regulatory significance. Please review the details and provide your approval decision.
-                    </p>
-                    
-                    {caseDetails.deviationApproval.comments && (
-                      <div className="p-3 bg-muted rounded-md">
-                        <p className="text-sm font-medium">Deviation Reason:</p>
-                        <p className="text-sm mt-1">{caseDetails.deviationApproval.comments}</p>
-                      </div>
-                    )}
+                <Form {...requestApprovalForm}>
+                  <form onSubmit={requestApprovalForm.handleSubmit(handleRequestApproval)} className="space-y-4 pt-4">
+                    <FormField
+                      control={requestApprovalForm.control}
+                      name="approvalType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Approval Type</FormLabel>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select approval type" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="normal">Normal Closure</SelectItem>
+                              <SelectItem value="deviation">Deviation Closure</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            Select whether this requires normal or deviation approval
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                     
                     <FormField
-                      control={deviationForm.control}
-                      name="status"
+                      control={requestApprovalForm.control}
+                      name="approver"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Approver</FormLabel>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select approver" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Jane Smith">Jane Smith</SelectItem>
+                              <SelectItem value="David Lee">David Lee</SelectItem>
+                              <SelectItem value="Robert Kim">Robert Kim</SelectItem>
+                              <SelectItem value="Emily Wang">Emily Wang</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            Select who should approve this case
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={requestApprovalForm.control}
+                      name="comments"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Comments <span className="text-red-500">*</span></FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Add comments explaining why approval is needed" 
+                              {...field} 
+                              rows={3} 
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Comments are required for approval requests
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <DialogFooter className="pt-4">
+                      <DialogClose asChild>
+                        <Button type="button" variant="outline">Cancel</Button>
+                      </DialogClose>
+                      <Button type="submit">Submit Request</Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
+          )}
+          
+          {/* First Level Approver Actions */}
+          {isFirstLevelApprover && caseDetails.status === 'pending' && (
+            <Dialog open={isProcessApprovalOpen} onOpenChange={setIsProcessApprovalOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="mr-2">
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Process Approval
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>
+                    {caseDetails.pendingApprovalType === 'normal' 
+                      ? 'Process Normal Closure Approval' 
+                      : 'Process Deviation Approval'}
+                  </DialogTitle>
+                </DialogHeader>
+                <Form {...processApprovalForm}>
+                  <form onSubmit={processApprovalForm.handleSubmit(handleProcessApproval)} className="space-y-4 pt-4">
+                    <div className="p-3 bg-muted rounded-md mb-4">
+                      <p className="text-sm font-medium">Request from: {caseDetails.owner}</p>
+                      <p className="text-sm mt-1">
+                        {caseDetails.pendingApprovalType === 'normal' 
+                          ? caseDetails.normalApproval?.comments 
+                          : caseDetails.deviationApproval?.comments}
+                      </p>
+                    </div>
+                    
+                    <FormField
+                      control={processApprovalForm.control}
+                      name="action"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Decision</FormLabel>
@@ -332,29 +512,80 @@ const CaseDetail = () => {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="approved">Approve Deviation</SelectItem>
-                              <SelectItem value="rejected">Reject Deviation</SelectItem>
+                              <SelectItem value="approve">
+                                <div className="flex items-center">
+                                  <ThumbsUp className="h-4 w-4 mr-2" />
+                                  Approve
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="reject">
+                                <div className="flex items-center">
+                                  <ThumbsDown className="h-4 w-4 mr-2" />
+                                  Reject
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="escalate">
+                                <div className="flex items-center">
+                                  <ArrowUp className="h-4 w-4 mr-2" />
+                                  Escalate
+                                </div>
+                              </SelectItem>
                             </SelectContent>
                           </Select>
+                          <FormDescription>
+                            Choose whether to approve, reject, or escalate this request
+                          </FormDescription>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
                     
+                    {processApprovalForm.watch('action') === 'escalate' && (
+                      <FormField
+                        control={processApprovalForm.control}
+                        name="escalateTo"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Escalate To <span className="text-red-500">*</span></FormLabel>
+                            <Select 
+                              onValueChange={field.onChange} 
+                              defaultValue={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select higher approver" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="Emily Wang">Emily Wang</SelectItem>
+                                <SelectItem value="Robert Kim">Robert Kim</SelectItem>
+                                <SelectItem value="William Taylor">William Taylor</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormDescription>
+                              Select who should handle this escalated case
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+                    
                     <FormField
-                      control={deviationForm.control}
+                      control={processApprovalForm.control}
                       name="comments"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Comments <span className="text-red-500">*</span></FormLabel>
                           <FormControl>
                             <Textarea 
-                              placeholder="Add comments or justification for your decision" 
+                              placeholder="Add comments explaining your decision" 
                               {...field} 
                               rows={3} 
                             />
                           </FormControl>
                           <FormDescription>
-                            Comments are required for all deviation approval decisions.
+                            Comments are required for all approval decisions
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
@@ -366,6 +597,109 @@ const CaseDetail = () => {
                         <Button type="button" variant="outline">Cancel</Button>
                       </DialogClose>
                       <Button type="submit">Submit Decision</Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
+          )}
+          
+          {/* Second Level Approver Actions */}
+          {isSecondLevelApprover && caseDetails.status === 'pending' && (
+            <Dialog open={isFinalApprovalOpen} onOpenChange={setIsFinalApprovalOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="mr-2">
+                  <ShieldCheck className="h-4 w-4 mr-2" />
+                  Final Approval
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>
+                    Final {caseDetails.pendingApprovalType === 'normal' 
+                      ? 'Normal Closure Approval' 
+                      : 'Deviation Approval'}
+                  </DialogTitle>
+                </DialogHeader>
+                <Form {...finalApprovalForm}>
+                  <form onSubmit={finalApprovalForm.handleSubmit(handleFinalApproval)} className="space-y-4 pt-4">
+                    <div className="p-3 bg-muted rounded-md mb-4">
+                      <p className="text-sm font-medium">Escalated by: {
+                        caseDetails.pendingApprovalType === 'normal' 
+                          ? caseDetails.normalApproval?.approver 
+                          : caseDetails.deviationApproval?.approver
+                      }</p>
+                      <p className="text-sm mt-1">
+                        {caseDetails.pendingApprovalType === 'normal' 
+                          ? caseDetails.normalApproval?.escalationComments 
+                          : caseDetails.deviationApproval?.escalationComments}
+                      </p>
+                    </div>
+                    
+                    <FormField
+                      control={finalApprovalForm.control}
+                      name="action"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Final Decision</FormLabel>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select decision" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="approve">
+                                <div className="flex items-center">
+                                  <ThumbsUp className="h-4 w-4 mr-2" />
+                                  Approve
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="reject">
+                                <div className="flex items-center">
+                                  <ThumbsDown className="h-4 w-4 mr-2" />
+                                  Reject
+                                </div>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            Choose whether to approve or reject this request
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={finalApprovalForm.control}
+                      name="comments"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Comments <span className="text-red-500">*</span></FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Add comments explaining your decision" 
+                              {...field} 
+                              rows={3} 
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Comments are required for all approval decisions
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <DialogFooter className="pt-4">
+                      <DialogClose asChild>
+                        <Button type="button" variant="outline">Cancel</Button>
+                      </DialogClose>
+                      <Button type="submit">Submit Final Decision</Button>
                     </DialogFooter>
                   </form>
                 </Form>
@@ -385,8 +719,10 @@ const CaseDetail = () => {
             <TabsTrigger value="documents">Documents</TabsTrigger>
             <TabsTrigger value="comments">Comments</TabsTrigger>
             <TabsTrigger value="history">History</TabsTrigger>
-            {caseDetails.deviationApproval?.isRequired && (
-              <TabsTrigger value="deviation">Deviation</TabsTrigger>
+            {caseDetails.pendingApprovalType && (
+              <TabsTrigger value="approval">
+                {caseDetails.pendingApprovalType === 'normal' ? 'Normal Approval' : 'Deviation Approval'}
+              </TabsTrigger>
             )}
           </TabsList>
           
@@ -590,177 +926,3 @@ const CaseDetail = () => {
               {tasks.map(task => (
                 <TaskItem 
                   key={task.id}
-                  {...task}
-                  onStatusChange={handleTaskStatusChange}
-                />
-              ))}
-              
-              {tasks.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  No tasks have been created for this case yet.
-                </div>
-              )}
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="documents" className="animate-fade-in">
-            <div className="glassmorphism rounded-xl p-6">
-              <DocumentAttachment />
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="comments" className="animate-fade-in">
-            <div className="glassmorphism rounded-xl p-6">
-              <CommentSection />
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="history" className="animate-fade-in">
-            <div className="glassmorphism rounded-xl p-6">
-              <h2 className="text-xl font-medium mb-4">Case History</h2>
-              
-              <div className="relative border-l-2 border-muted ml-4 pl-6 pb-2 pt-1">
-                <div className="mb-8 relative">
-                  <div className="absolute -left-[31px] mt-1.5 h-4 w-4 rounded-full bg-primary"></div>
-                  <div className="mb-1">
-                    <span className="text-sm font-medium">Case created</span>
-                    <span className="text-xs text-muted-foreground ml-2">July 25, 2023 at 10:23 AM</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Michael Chen created this case and assigned it to Jane Smith
-                  </p>
-                </div>
-                
-                <div className="mb-8 relative">
-                  <div className="absolute -left-[31px] mt-1.5 h-4 w-4 rounded-full bg-primary"></div>
-                  <div className="mb-1">
-                    <span className="text-sm font-medium">Tasks created</span>
-                    <span className="text-xs text-muted-foreground ml-2">July 25, 2023 at 10:45 AM</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Jane Smith created 4 tasks for this case
-                  </p>
-                </div>
-                
-                <div className="mb-8 relative">
-                  <div className="absolute -left-[31px] mt-1.5 h-4 w-4 rounded-full bg-primary"></div>
-                  <div className="mb-1">
-                    <span className="text-sm font-medium">Comment added</span>
-                    <span className="text-xs text-muted-foreground ml-2">July 26, 2023 at 9:15 AM</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Jane Smith added a comment
-                  </p>
-                </div>
-                
-                <div className="mb-8 relative">
-                  <div className="absolute -left-[31px] mt-1.5 h-4 w-4 rounded-full bg-primary"></div>
-                  <div className="mb-1">
-                    <span className="text-sm font-medium">Task completed</span>
-                    <span className="text-xs text-muted-foreground ml-2">July 28, 2023 at 2:30 PM</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Sarah Johnson completed task "Verify Internal Controls Adherence"
-                  </p>
-                </div>
-                
-                <div className="relative">
-                  <div className="absolute -left-[31px] mt-1.5 h-4 w-4 rounded-full bg-primary"></div>
-                  <div className="mb-1">
-                    <span className="text-sm font-medium">Task status updated</span>
-                    <span className="text-xs text-muted-foreground ml-2">July 30, 2023 at 11:05 AM</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Michael Chen changed task "Collect Data from All Departments" to In Progress
-                  </p>
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-          
-          {caseDetails.deviationApproval?.isRequired && (
-            <TabsContent value="deviation" className="animate-fade-in">
-              <div className="glassmorphism rounded-xl p-6">
-                <h2 className="text-xl font-medium mb-4">Deviation Approval</h2>
-                
-                <div className="mb-6">
-                  <div className={`p-4 rounded-lg border ${
-                    caseDetails.deviationApproval.status === 'pending'
-                      ? 'bg-amber-50 border-amber-200'
-                      : caseDetails.deviationApproval.status === 'approved'
-                      ? 'bg-green-50 border-green-200'
-                      : 'bg-red-50 border-red-200'
-                  }`}>
-                    <div className="flex items-center mb-3">
-                      {caseDetails.deviationApproval.status === 'pending' ? (
-                        <AlertTriangle className="h-5 w-5 text-amber-500 mr-2" />
-                      ) : caseDetails.deviationApproval.status === 'approved' ? (
-                        <ShieldCheck className="h-5 w-5 text-green-500 mr-2" />
-                      ) : (
-                        <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
-                      )}
-                      <h3 className="text-sm font-semibold">
-                        {caseDetails.deviationApproval.status === 'pending'
-                          ? 'Pending Approval'
-                          : caseDetails.deviationApproval.status === 'approved'
-                          ? 'Deviation Approved'
-                          : 'Deviation Rejected'
-                        }
-                      </h3>
-                    </div>
-                    
-                    <div className="space-y-3 text-sm">
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="text-muted-foreground">Status:</div>
-                        <div className="col-span-2 font-medium capitalize">
-                          {caseDetails.deviationApproval.status}
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="text-muted-foreground">Assigned to:</div>
-                        <div className="col-span-2">
-                          {caseDetails.deviationApproval.approver || 'Unassigned'}
-                        </div>
-                      </div>
-                      
-                      {caseDetails.deviationApproval.approvalDate && (
-                        <div className="grid grid-cols-3 gap-2">
-                          <div className="text-muted-foreground">Review date:</div>
-                          <div className="col-span-2">
-                            {caseDetails.deviationApproval.approvalDate}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {caseDetails.deviationApproval.comments && (
-                        <div className="grid grid-cols-3 gap-2">
-                          <div className="text-muted-foreground">Comments:</div>
-                          <div className="col-span-2">
-                            {caseDetails.deviationApproval.comments}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                
-                {caseDetails.deviationApproval.status === 'pending' && (
-                  <Button
-                    onClick={() => setIsDeviationDialogOpen(true)}
-                    className="w-full md:w-auto"
-                  >
-                    <ShieldCheck className="h-4 w-4 mr-2" />
-                    Review Deviation Request
-                  </Button>
-                )}
-              </div>
-            </TabsContent>
-          )}
-        </Tabs>
-      </main>
-    </div>
-  );
-};
-
-export default CaseDetail;

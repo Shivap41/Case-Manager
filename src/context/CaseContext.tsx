@@ -1,13 +1,35 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
-export type CaseStatus = 'new' | 'inprogress' | 'pending' | 'completed';
+export type CaseStatus = 'new' | 'inprogress' | 'pending' | 'completed' | 'rejected';
+
+export type ApprovalLevel = 'firstLevel' | 'secondLevel';
 
 export type DeviationApproval = {
   isRequired: boolean;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'escalated';
   approver?: string;
   approvalDate?: string;
   comments?: string;
+  escalatedTo?: string;
+  escalationDate?: string;
+  escalationComments?: string;
+  finalDecision?: 'approved' | 'rejected';
+  finalDecisionDate?: string;
+  finalDecisionComments?: string;
+};
+
+export type NormalApproval = {
+  isRequired: boolean;
+  status: 'pending' | 'approved' | 'rejected' | 'escalated';
+  approver?: string;
+  approvalDate?: string;
+  comments?: string;
+  escalatedTo?: string;
+  escalationDate?: string;
+  escalationComments?: string;
+  finalDecision?: 'approved' | 'rejected';
+  finalDecisionDate?: string;
+  finalDecisionComments?: string;
 };
 
 export type Case = {
@@ -26,6 +48,9 @@ export type Case = {
   createdDate: string;
   createdBy: string;
   deviationApproval?: DeviationApproval;
+  normalApproval?: NormalApproval;
+  pendingApprovalType?: 'normal' | 'deviation';
+  currentApprovalLevel?: ApprovalLevel;
 };
 
 // Sample initial cases data
@@ -89,7 +114,15 @@ const initialCases: Case[] = [
     completedTasks: 4,
     priority: 'Medium',
     createdDate: 'July 22, 2023',
-    createdBy: 'David Lee'
+    createdBy: 'David Lee',
+    normalApproval: {
+      isRequired: true,
+      status: 'pending',
+      approver: 'Robert Kim',
+      comments: 'Requesting normal closure approval for this case.'
+    },
+    pendingApprovalType: 'normal',
+    currentApprovalLevel: 'firstLevel'
   },
   {
     id: '4',
@@ -105,7 +138,18 @@ const initialCases: Case[] = [
     completedTasks: 9,
     priority: 'Medium',
     createdDate: 'July 18, 2023',
-    createdBy: 'Emily Wang'
+    createdBy: 'Emily Wang',
+    normalApproval: {
+      isRequired: true,
+      status: 'escalated',
+      approver: 'William Taylor',
+      comments: 'Initial review completed, requires higher level approval.',
+      escalatedTo: 'Emily Wang',
+      escalationDate: 'July 30, 2023',
+      escalationComments: 'Escalating due to regulatory implications.'
+    },
+    pendingApprovalType: 'normal',
+    currentApprovalLevel: 'secondLevel'
   },
   {
     id: '5',
@@ -121,7 +165,14 @@ const initialCases: Case[] = [
     completedTasks: 7,
     priority: 'Low',
     createdDate: 'July 10, 2023',
-    createdBy: 'Robert Kim'
+    createdBy: 'Robert Kim',
+    normalApproval: {
+      isRequired: true,
+      status: 'approved',
+      approver: 'Robert Kim',
+      approvalDate: 'July 20, 2023',
+      comments: 'Approved. All training objectives met satisfactorily.'
+    }
   },
   {
     id: '6',
@@ -153,7 +204,18 @@ const initialCases: Case[] = [
     completedTasks: 8,
     priority: 'Medium',
     createdDate: 'July 15, 2023',
-    createdBy: 'William Taylor'
+    createdBy: 'William Taylor',
+    deviationApproval: {
+      isRequired: true,
+      status: 'escalated',
+      approver: 'Emily Wang',
+      comments: 'Requesting deviation approval due to special circumstances.',
+      escalatedTo: 'Robert Kim',
+      escalationDate: 'July 25, 2023',
+      escalationComments: 'Escalating for further review of compliance implications.'
+    },
+    pendingApprovalType: 'deviation',
+    currentApprovalLevel: 'secondLevel'
   },
   {
     id: '8',
@@ -169,7 +231,14 @@ const initialCases: Case[] = [
     completedTasks: 14,
     priority: 'Medium',
     createdDate: 'July 5, 2023',
-    createdBy: 'Jane Smith'
+    createdBy: 'Jane Smith',
+    normalApproval: {
+      isRequired: true,
+      status: 'approved',
+      approver: 'Jane Smith',
+      approvalDate: 'July 28, 2023',
+      comments: 'Approved. All privacy requirements have been met.'
+    }
   }
 ];
 
@@ -178,6 +247,19 @@ type CaseContextType = {
   addCase: (newCase: Omit<Case, 'id'>) => void;
   getCaseById: (id: string) => Case | undefined;
   updateDeviationApproval: (caseId: string, approval: DeviationApproval) => void;
+  updateNormalApproval: (caseId: string, approval: NormalApproval) => void;
+  requestApproval: (caseId: string, approvalType: 'normal' | 'deviation', approver: string, comments: string) => void;
+  processApproval: (
+    caseId: string, 
+    action: 'approve' | 'reject' | 'escalate', 
+    comments: string, 
+    escalateTo?: string
+  ) => void;
+  processFinalApproval: (
+    caseId: string, 
+    action: 'approve' | 'reject', 
+    comments: string
+  ) => void;
 };
 
 const CaseContext = createContext<CaseContextType | undefined>(undefined);
@@ -205,8 +287,178 @@ export const CaseProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
+  const updateNormalApproval = (caseId: string, approval: NormalApproval) => {
+    setCases(prevCases => 
+      prevCases.map(caseItem => 
+        caseItem.id === caseId 
+          ? { ...caseItem, normalApproval: approval } 
+          : caseItem
+      )
+    );
+  };
+
+  const requestApproval = (caseId: string, approvalType: 'normal' | 'deviation', approver: string, comments: string) => {
+    setCases(prevCases => 
+      prevCases.map(caseItem => {
+        if (caseItem.id === caseId) {
+          const newCase = { 
+            ...caseItem, 
+            status: 'pending' as CaseStatus,
+            pendingApprovalType: approvalType,
+            currentApprovalLevel: 'firstLevel'
+          };
+          
+          if (approvalType === 'deviation') {
+            newCase.deviationApproval = {
+              isRequired: true,
+              status: 'pending',
+              approver: approver,
+              comments: comments
+            };
+          } else {
+            newCase.normalApproval = {
+              isRequired: true,
+              status: 'pending',
+              approver: approver,
+              comments: comments
+            };
+          }
+          
+          return newCase;
+        }
+        return caseItem;
+      })
+    );
+  };
+
+  const processApproval = (
+    caseId: string, 
+    action: 'approve' | 'reject' | 'escalate', 
+    comments: string, 
+    escalateTo?: string
+  ) => {
+    setCases(prevCases => 
+      prevCases.map(caseItem => {
+        if (caseItem.id === caseId) {
+          const approvalType = caseItem.pendingApprovalType;
+          if (!approvalType) return caseItem;
+          
+          let newCase = { ...caseItem };
+          const today = new Date().toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          });
+          
+          if (approvalType === 'deviation' && caseItem.deviationApproval) {
+            const approval = { ...caseItem.deviationApproval };
+            
+            if (action === 'approve') {
+              approval.status = 'approved';
+              approval.approvalDate = today;
+              approval.comments = comments;
+              newCase.status = 'completed';
+            } else if (action === 'reject') {
+              approval.status = 'rejected';
+              approval.approvalDate = today;
+              approval.comments = comments;
+              newCase.status = 'rejected';
+            } else if (action === 'escalate' && escalateTo) {
+              approval.status = 'escalated';
+              approval.escalatedTo = escalateTo;
+              approval.escalationDate = today;
+              approval.escalationComments = comments;
+              newCase.currentApprovalLevel = 'secondLevel';
+            }
+            
+            newCase.deviationApproval = approval;
+          } else if (approvalType === 'normal' && caseItem.normalApproval) {
+            const approval = { ...caseItem.normalApproval };
+            
+            if (action === 'approve') {
+              approval.status = 'approved';
+              approval.approvalDate = today;
+              approval.comments = comments;
+              newCase.status = 'completed';
+            } else if (action === 'reject') {
+              approval.status = 'rejected';
+              approval.approvalDate = today;
+              approval.comments = comments;
+              newCase.status = 'rejected';
+            } else if (action === 'escalate' && escalateTo) {
+              approval.status = 'escalated';
+              approval.escalatedTo = escalateTo;
+              approval.escalationDate = today;
+              approval.escalationComments = comments;
+              newCase.currentApprovalLevel = 'secondLevel';
+            }
+            
+            newCase.normalApproval = approval;
+          }
+          
+          return newCase;
+        }
+        return caseItem;
+      })
+    );
+  };
+
+  const processFinalApproval = (
+    caseId: string, 
+    action: 'approve' | 'reject', 
+    comments: string
+  ) => {
+    setCases(prevCases => 
+      prevCases.map(caseItem => {
+        if (caseItem.id === caseId) {
+          const approvalType = caseItem.pendingApprovalType;
+          if (!approvalType) return caseItem;
+          
+          let newCase = { ...caseItem };
+          const today = new Date().toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          });
+          
+          if (approvalType === 'deviation' && caseItem.deviationApproval) {
+            const approval = { ...caseItem.deviationApproval };
+            
+            approval.finalDecision = action === 'approve' ? 'approved' : 'rejected';
+            approval.finalDecisionDate = today;
+            approval.finalDecisionComments = comments;
+            
+            newCase.status = action === 'approve' ? 'completed' : 'rejected';
+            newCase.deviationApproval = approval;
+          } else if (approvalType === 'normal' && caseItem.normalApproval) {
+            const approval = { ...caseItem.normalApproval };
+            
+            approval.finalDecision = action === 'approve' ? 'approved' : 'rejected';
+            approval.finalDecisionDate = today;
+            approval.finalDecisionComments = comments;
+            
+            newCase.status = action === 'approve' ? 'completed' : 'rejected';
+            newCase.normalApproval = approval;
+          }
+          
+          return newCase;
+        }
+        return caseItem;
+      })
+    );
+  };
+
   return (
-    <CaseContext.Provider value={{ cases, addCase, getCaseById, updateDeviationApproval }}>
+    <CaseContext.Provider value={{ 
+      cases, 
+      addCase, 
+      getCaseById, 
+      updateDeviationApproval,
+      updateNormalApproval,
+      requestApproval,
+      processApproval,
+      processFinalApproval
+    }}>
       {children}
     </CaseContext.Provider>
   );

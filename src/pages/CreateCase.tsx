@@ -19,7 +19,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -42,17 +41,6 @@ const formSchema = z.object({
   }),
   dueDate: z.string(),
   priority: z.string().optional(),
-  requiresDeviation: z.boolean().default(false),
-  deviationApprover: z.string().optional(),
-  deviationComments: z.string().optional().refine(
-    (val) => {
-      // If requiresDeviation is true, deviationComments is required
-      return true;
-    },
-    {
-      message: "Deviation comments are required when requesting deviation approval",
-    }
-  ),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -70,37 +58,10 @@ const CreateCase = () => {
       department: "",
       dueDate: "",
       priority: "Medium",
-      requiresDeviation: false,
-      deviationApprover: "",
-      deviationComments: "",
     },
   });
 
-  // Update the validation rules when requiresDeviation changes
-  useEffect(() => {
-    const requiresDeviation = form.watch("requiresDeviation");
-    const currentComments = form.watch("deviationComments");
-    
-    if (requiresDeviation && (!currentComments || currentComments.trim() === "")) {
-      form.setError("deviationComments", {
-        type: "manual",
-        message: "Deviation comments are required when requesting deviation approval",
-      });
-    } else if (!requiresDeviation) {
-      form.clearErrors("deviationComments");
-    }
-  }, [form.watch("requiresDeviation")]);
-
   const onSubmit = (data: FormValues) => {
-    // Check if deviation is required but comments are missing
-    if (data.requiresDeviation && (!data.deviationComments || data.deviationComments.trim() === "")) {
-      form.setError("deviationComments", {
-        type: "manual",
-        message: "Deviation comments are required when requesting deviation approval",
-      });
-      return;
-    }
-
     const newCase: Omit<Case, "id"> = {
       title: data.title,
       description: data.description,
@@ -119,12 +80,6 @@ const CreateCase = () => {
         day: "numeric",
       }),
       createdBy: "Current User",
-      deviationApproval: data.requiresDeviation ? {
-        isRequired: true,
-        status: 'pending',
-        approver: data.deviationApprover || undefined,
-        comments: data.deviationComments
-      } : undefined
     };
 
     addCase(newCase);
@@ -265,73 +220,6 @@ const CreateCase = () => {
               )}
             />
           </div>
-
-          <FormField
-            control={form.control}
-            name="requiresDeviation"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <FormLabel>Requires Deviation Approval</FormLabel>
-                  <FormDescription>
-                    Enable if this case requires deviation approval.
-                  </FormDescription>
-                </div>
-                <FormControl>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-
-          {form.watch("requiresDeviation") && (
-            <>
-              <FormField
-                control={form.control}
-                name="deviationApprover"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Deviation Approver</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Enter deviation approver"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      The person responsible for approving deviations for this
-                      case.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="deviationComments"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Reason for Deviation</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Explain why this deviation is needed"
-                        {...field}
-                        rows={3}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Provide a detailed explanation for why this deviation is required.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </>
-          )}
 
           <div className="flex items-center justify-end space-x-4 pt-4">
             <Button type="button" variant="outline" onClick={handleCancel}>
