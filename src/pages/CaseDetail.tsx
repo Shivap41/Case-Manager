@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -926,3 +927,263 @@ const CaseDetail = () => {
               {tasks.map(task => (
                 <TaskItem 
                   key={task.id}
+                  task={task}
+                  onStatusChange={handleTaskStatusChange}
+                />
+              ))}
+              
+              {tasks.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  No tasks found for this case. Create a new task to get started.
+                </div>
+              )}
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="documents" className="animate-fade-in">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-medium">Documents</h2>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Document
+              </Button>
+            </div>
+            
+            <div className="glassmorphism rounded-xl p-6">
+              <DocumentAttachment
+                documents={[
+                  { id: '1', name: 'Compliance Report.pdf', type: 'pdf', size: '1.2 MB', uploadedBy: 'Jane Smith', uploadedDate: 'Aug 5, 2023' },
+                  { id: '2', name: 'Regulatory Guidelines.docx', type: 'word', size: '845 KB', uploadedBy: 'David Lee', uploadedDate: 'Aug 7, 2023' },
+                  { id: '3', name: 'Department Data.xlsx', type: 'excel', size: '1.5 MB', uploadedBy: 'Michael Chen', uploadedDate: 'Aug 8, 2023' },
+                ]}
+              />
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="comments" className="animate-fade-in">
+            <div className="glassmorphism rounded-xl p-6">
+              <CommentSection />
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="history" className="animate-fade-in">
+            <div className="glassmorphism rounded-xl p-6">
+              <h2 className="text-xl font-medium mb-4">Case History</h2>
+              
+              <div className="space-y-6">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 bg-blue-100 p-2 rounded-full mr-4">
+                    <User className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div className="flex-grow">
+                    <div className="flex items-center">
+                      <p className="font-medium">Michael Chen</p>
+                      <span className="mx-2 text-muted-foreground">•</span>
+                      <p className="text-sm text-muted-foreground">Aug 12, 2023 at 10:23 AM</p>
+                    </div>
+                    <p className="mt-1 text-sm">Created the case</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 bg-green-100 p-2 rounded-full mr-4">
+                    <Paperclip className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div className="flex-grow">
+                    <div className="flex items-center">
+                      <p className="font-medium">Sarah Johnson</p>
+                      <span className="mx-2 text-muted-foreground">•</span>
+                      <p className="text-sm text-muted-foreground">Aug 12, 2023 at 2:45 PM</p>
+                    </div>
+                    <p className="mt-1 text-sm">Added document: <span className="font-medium">Compliance Report.pdf</span></p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 bg-purple-100 p-2 rounded-full mr-4">
+                    <MessageSquare className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div className="flex-grow">
+                    <div className="flex items-center">
+                      <p className="font-medium">Jane Smith</p>
+                      <span className="mx-2 text-muted-foreground">•</span>
+                      <p className="text-sm text-muted-foreground">Aug 13, 2023 at 9:10 AM</p>
+                    </div>
+                    <p className="mt-1 text-sm">Added a comment: "We should prioritize the regulatory compliance aspects of this case."</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 bg-amber-100 p-2 rounded-full mr-4">
+                    <CheckCircle2 className="h-5 w-5 text-amber-600" />
+                  </div>
+                  <div className="flex-grow">
+                    <div className="flex items-center">
+                      <p className="font-medium">David Lee</p>
+                      <span className="mx-2 text-muted-foreground">•</span>
+                      <p className="text-sm text-muted-foreground">Aug 14, 2023 at 3:30 PM</p>
+                    </div>
+                    <p className="mt-1 text-sm">Completed task: <span className="font-medium">Verify Internal Controls Adherence</span></p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+          
+          {caseDetails.pendingApprovalType && (
+            <TabsContent value="approval" className="animate-fade-in">
+              <div className="glassmorphism rounded-xl p-6">
+                <h2 className="text-xl font-medium mb-4">
+                  {caseDetails.pendingApprovalType === 'normal' ? 'Normal Closure Approval' : 'Deviation Approval'} Details
+                </h2>
+                
+                <div className="space-y-6">
+                  <div className="p-4 bg-muted rounded-lg">
+                    <h3 className="text-sm font-medium mb-2">Request Information</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Requested By</p>
+                        <p className="text-sm font-medium">{caseDetails.owner}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Request Date</p>
+                        <p className="text-sm font-medium">
+                          {caseDetails.pendingApprovalType === 'normal'
+                            ? caseDetails.normalApproval?.requestDate
+                            : caseDetails.deviationApproval?.requestDate}
+                        </p>
+                      </div>
+                      <div className="col-span-1 md:col-span-2">
+                        <p className="text-xs text-muted-foreground">Request Comments</p>
+                        <p className="text-sm">
+                          {caseDetails.pendingApprovalType === 'normal'
+                            ? caseDetails.normalApproval?.comments
+                            : caseDetails.deviationApproval?.comments}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="p-4 bg-muted rounded-lg">
+                    <h3 className="text-sm font-medium mb-2">Approval Status</h3>
+                    <div className="relative">
+                      <div className="absolute left-4 top-0 bottom-0 w-px bg-border"></div>
+                      
+                      <div className="relative pl-10 pb-6">
+                        <div className="absolute left-[15px] -translate-x-1/2 top-1 w-2 h-2 rounded-full bg-primary"></div>
+                        <div>
+                          <p className="text-sm font-medium">
+                            Request Submitted to {approvalDetails?.approver}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {approvalDetails?.requestDate}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {approvalDetails?.status === 'approved' && (
+                        <div className="relative pl-10 pb-6">
+                          <div className="absolute left-[15px] -translate-x-1/2 top-1 w-2 h-2 rounded-full bg-green-500"></div>
+                          <div>
+                            <p className="text-sm font-medium">
+                              Approved by {approvalDetails.approver}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {approvalDetails.approvalDate}
+                            </p>
+                            <p className="text-sm mt-1">
+                              {approvalDetails.approvalComments}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {approvalDetails?.status === 'rejected' && (
+                        <div className="relative pl-10 pb-6">
+                          <div className="absolute left-[15px] -translate-x-1/2 top-1 w-2 h-2 rounded-full bg-red-500"></div>
+                          <div>
+                            <p className="text-sm font-medium">
+                              Rejected by {approvalDetails.approver}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {approvalDetails.rejectionDate}
+                            </p>
+                            <p className="text-sm mt-1">
+                              {approvalDetails.rejectionComments}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {approvalDetails?.status === 'escalated' && (
+                        <>
+                          <div className="relative pl-10 pb-6">
+                            <div className="absolute left-[15px] -translate-x-1/2 top-1 w-2 h-2 rounded-full bg-blue-500"></div>
+                            <div>
+                              <p className="text-sm font-medium">
+                                Escalated by {approvalDetails.approver} to {approvalDetails.escalatedTo}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {approvalDetails.escalationDate}
+                              </p>
+                              <p className="text-sm mt-1">
+                                {approvalDetails.escalationComments}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {approvalDetails.finalDecision === 'approved' ? (
+                            <div className="relative pl-10 pb-6">
+                              <div className="absolute left-[15px] -translate-x-1/2 top-1 w-2 h-2 rounded-full bg-green-500"></div>
+                              <div>
+                                <p className="text-sm font-medium">
+                                  Final Approval by {approvalDetails.escalatedTo}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {approvalDetails.finalDecisionDate}
+                                </p>
+                                <p className="text-sm mt-1">
+                                  {approvalDetails.finalDecisionComments}
+                                </p>
+                              </div>
+                            </div>
+                          ) : approvalDetails.finalDecision === 'rejected' ? (
+                            <div className="relative pl-10 pb-6">
+                              <div className="absolute left-[15px] -translate-x-1/2 top-1 w-2 h-2 rounded-full bg-red-500"></div>
+                              <div>
+                                <p className="text-sm font-medium">
+                                  Final Rejection by {approvalDetails.escalatedTo}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {approvalDetails.finalDecisionDate}
+                                </p>
+                                <p className="text-sm mt-1">
+                                  {approvalDetails.finalDecisionComments}
+                                </p>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="relative pl-10 pb-6">
+                              <div className="absolute left-[15px] -translate-x-1/2 top-1 w-2 h-2 rounded-full bg-amber-500"></div>
+                              <div>
+                                <p className="text-sm font-medium">
+                                  Pending final decision from {approvalDetails.escalatedTo}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+          )}
+        </Tabs>
+      </main>
+    </div>
+  );
+};
+
+export default CaseDetail;
