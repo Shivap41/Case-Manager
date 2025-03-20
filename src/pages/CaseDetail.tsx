@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -178,6 +177,14 @@ const CaseDetail = () => {
   const handleDeviationApproval = (data: DeviationApprovalFormValues) => {
     if (!id) return;
 
+    if (!data.comments || data.comments.trim() === '') {
+      deviationForm.setError('comments', {
+        type: 'manual',
+        message: 'Comments are required for deviation approval decisions'
+      });
+      return;
+    }
+
     const approval: DeviationApproval = {
       isRequired: true,
       status: data.status,
@@ -301,6 +308,13 @@ const CaseDetail = () => {
                       This case requires deviation approval due to its regulatory significance. Please review the details and provide your approval decision.
                     </p>
                     
+                    {caseDetails.deviationApproval.comments && (
+                      <div className="p-3 bg-muted rounded-md">
+                        <p className="text-sm font-medium">Deviation Reason:</p>
+                        <p className="text-sm mt-1">{caseDetails.deviationApproval.comments}</p>
+                      </div>
+                    )}
+                    
                     <FormField
                       control={deviationForm.control}
                       name="status"
@@ -330,7 +344,7 @@ const CaseDetail = () => {
                       name="comments"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Comments</FormLabel>
+                          <FormLabel>Comments <span className="text-red-500">*</span></FormLabel>
                           <FormControl>
                             <Textarea 
                               placeholder="Add comments or justification for your decision" 
@@ -338,6 +352,10 @@ const CaseDetail = () => {
                               rows={3} 
                             />
                           </FormControl>
+                          <FormDescription>
+                            Comments are required for all deviation approval decisions.
+                          </FormDescription>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />

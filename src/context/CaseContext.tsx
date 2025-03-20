@@ -49,6 +49,7 @@ const initialCases: Case[] = [
       isRequired: true,
       status: 'pending',
       approver: 'David Lee',
+      comments: 'This deviation is required due to regulatory changes in Q2 that need immediate attention outside of standard procedures.'
     }
   },
   {

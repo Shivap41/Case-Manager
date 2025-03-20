@@ -1,9 +1,10 @@
 
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, ShieldCheck, AlertTriangle, CheckCircle } from 'lucide-react';
 import CaseCard from './CaseCard';
 import { Button } from '@/components/ui/button';
 import { useCases, Case } from '@/context/CaseContext';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const KanbanBoard = () => {
   const { cases } = useCases();
@@ -16,16 +17,48 @@ const KanbanBoard = () => {
   // Custom render for cases that highlights deviation approvals
   const renderCase = (caseItem: Case) => {
     const hasDeviationApproval = caseItem.deviationApproval?.isRequired;
+    
+    const getDeviationIcon = () => {
+      if (!hasDeviationApproval) return null;
+      const status = caseItem.deviationApproval?.status;
+      
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge 
+                className={`absolute -top-2 -right-2 ${
+                  status === 'pending' 
+                    ? 'bg-amber-500 hover:bg-amber-600' 
+                    : status === 'approved' 
+                    ? 'bg-green-500 hover:bg-green-600' 
+                    : 'bg-red-500 hover:bg-red-600'
+                }`}
+              >
+                {status === 'pending' ? (
+                  <AlertTriangle className="h-3 w-3" />
+                ) : status === 'approved' ? (
+                  <CheckCircle className="h-3 w-3" />
+                ) : (
+                  <ShieldCheck className="h-3 w-3" />
+                )}
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Deviation {caseItem.deviationApproval?.status}</p>
+              {caseItem.deviationApproval?.comments && (
+                <p className="text-xs max-w-60 truncate">{caseItem.deviationApproval.comments}</p>
+              )}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    };
+    
     return (
       <div key={caseItem.id} className="relative">
         <CaseCard {...caseItem} />
-        {hasDeviationApproval && (
-          <Badge 
-            className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600"
-          >
-            Deviation
-          </Badge>
-        )}
+        {getDeviationIcon()}
       </div>
     );
   };
