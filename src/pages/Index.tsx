@@ -7,6 +7,9 @@ import DashboardStats from '@/components/DashboardStats';
 import CaseFilters from '@/components/CaseFilters';
 import ListView from '@/components/ListView';
 import KanbanBoard from '@/components/KanbanBoard';
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import { useNavigate } from 'react-router-dom';
 
 // Define the filter values type
 type FilterValues = {
@@ -28,6 +31,7 @@ interface CaseFiltersProps {
 
 const Index = () => {
   const { cases } = useCases();
+  const navigate = useNavigate();
   const [activeView, setActiveView] = useState<'list' | 'kanban'>('list');
   const [filters, setFilters] = useState<FilterValues>({
     status: [],
@@ -36,6 +40,11 @@ const Index = () => {
     dateRange: {},
     search: ''
   });
+
+  // Navigate to create case page
+  const handleCreateCase = () => {
+    navigate('/create-case');
+  };
 
   // Filter cases based on selected filters
   const filteredCases = cases.filter(caseItem => {
@@ -58,6 +67,14 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <main className="container mx-auto p-4 md:p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">Cases Dashboard</h1>
+          <Button onClick={handleCreateCase} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Create Case
+          </Button>
+        </div>
+
         <DashboardStats cases={cases} />
         
         <div className="mt-6">
