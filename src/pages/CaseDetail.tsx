@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -58,20 +59,21 @@ const requestApprovalSchema = z.object({
   comments: z.string().min(10, "Comments must be at least 10 characters")
 });
 
+// Fix the processApprovalSchema to properly validate escalation
 const processApprovalSchema = z.object({
   action: z.enum(['approve', 'reject', 'escalate']),
   comments: z.string().min(10, "Comments must be at least 10 characters"),
-  escalateTo: z.string().optional().superRefine((val, ctx) => {
-    if (ctx.parent.action === 'escalate' && (!val || val.length < 2)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Escalation recipient is required when escalating"
-      });
-      return false;
-    }
-    return true;
-  })
-});
+  escalateTo: z.string().optional()
+}).refine(
+  (data) => {
+    // Only require escalateTo when action is 'escalate'
+    return data.action !== 'escalate' || (data.escalateTo && data.escalateTo.length >= 2);
+  },
+  {
+    message: "Escalation recipient is required when escalating",
+    path: ["escalateTo"], // This specifies which field the error is attached to
+  }
+);
 
 const finalApprovalSchema = z.object({
   action: z.enum(['approve', 'reject']),
