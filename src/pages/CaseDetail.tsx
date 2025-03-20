@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -44,14 +43,21 @@ type TaskFormValues = {
   dueDate: string;
 };
 
-// Schema for requesting approval
+const commentSchema = z.object({
+  comment: z.string().min(1, "Comment is required").refine(
+    (val) => val.trim().length > 0,
+    {
+      message: "Comment cannot be empty"
+    }
+  )
+});
+
 const requestApprovalSchema = z.object({
   approvalType: z.enum(['normal', 'deviation']),
   approver: z.string().min(2, "Approver name is required"),
   comments: z.string().min(10, "Comments must be at least 10 characters")
 });
 
-// Schema for processing approval
 const processApprovalSchema = z.object({
   action: z.enum(['approve', 'reject', 'escalate']),
   comments: z.string().min(10, "Comments must be at least 10 characters"),
@@ -68,7 +74,6 @@ const processApprovalSchema = z.object({
   )
 });
 
-// Schema for final approval
 const finalApprovalSchema = z.object({
   action: z.enum(['approve', 'reject']),
   comments: z.string().min(10, "Comments must be at least 10 characters")
@@ -151,7 +156,6 @@ const CaseDetail = () => {
   const [isProcessApprovalOpen, setIsProcessApprovalOpen] = useState(false);
   const [isFinalApprovalOpen, setIsFinalApprovalOpen] = useState(false);
   
-  // Form setup
   const taskForm = useForm<TaskFormValues>({
     defaultValues: {
       title: '',
@@ -188,10 +192,8 @@ const CaseDetail = () => {
     }
   });
 
-  // Determine if user is a case owner
-  const isCaseOwner = true; // In a real app, you would check against the logged-in user
-  
-  // Determine if user is an approver
+  const isCaseOwner = true;
+
   const isFirstLevelApprover = caseDetails.pendingApprovalType && 
     (caseDetails.pendingApprovalType === 'normal' 
       ? caseDetails.normalApproval?.approver === 'Current User'
@@ -203,7 +205,6 @@ const CaseDetail = () => {
       ? caseDetails.normalApproval?.escalatedTo === 'Current User'
       : caseDetails.deviationApproval?.escalatedTo === 'Current User');
 
-  // Handlers
   const handleTaskStatusChange = (taskId: string, newStatus: TaskStatus) => {
     setTasks(
       tasks.map(task => 
@@ -280,7 +281,6 @@ const CaseDetail = () => {
     toast.success(`Case ${actionText} successfully`);
   };
 
-  // Get the appropriate approval object based on the case's pending approval type
   const getApprovalDetails = () => {
     if (!caseDetails.pendingApprovalType) return null;
     
@@ -363,7 +363,6 @@ const CaseDetail = () => {
             <p className="text-muted-foreground text-sm mt-1">Case #{caseDetails.id}</p>
           </div>
           
-          {/* Case Owner Actions */}
           {isCaseOwner && caseDetails.status === 'inprogress' && (
             <Dialog open={isRequestApprovalOpen} onOpenChange={setIsRequestApprovalOpen}>
               <DialogTrigger asChild>
@@ -469,7 +468,6 @@ const CaseDetail = () => {
             </Dialog>
           )}
           
-          {/* First Level Approver Actions */}
           {isFirstLevelApprover && caseDetails.status === 'pending' && (
             <Dialog open={isProcessApprovalOpen} onOpenChange={setIsProcessApprovalOpen}>
               <DialogTrigger asChild>
@@ -605,7 +603,6 @@ const CaseDetail = () => {
             </Dialog>
           )}
           
-          {/* Second Level Approver Actions */}
           {isSecondLevelApprover && caseDetails.status === 'pending' && (
             <Dialog open={isFinalApprovalOpen} onOpenChange={setIsFinalApprovalOpen}>
               <DialogTrigger asChild>
@@ -1187,3 +1184,4 @@ const CaseDetail = () => {
 };
 
 export default CaseDetail;
+

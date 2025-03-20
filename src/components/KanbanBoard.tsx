@@ -57,13 +57,13 @@ const KanbanBoard = () => {
     
     return (
       <div key={caseItem.id} className="relative">
-        <CaseCard {...caseItem} />
+        <CaseCard caseData={caseItem} />
         {getDeviationIcon()}
       </div>
     );
   };
 
-  const KanbanColumn = ({ title, cases, className }: { title: string, cases: ReturnType<typeof useCases>['cases'], className?: string }) => (
+  const KanbanColumn = ({ title, cases, className }: { title: string, cases: Case[], className?: string }) => (
     <div className={`flex flex-col h-full ${className}`}>
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-medium text-md">{title} <span className="text-muted-foreground ml-1 text-sm">({cases.length})</span></h3>

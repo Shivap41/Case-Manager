@@ -1,11 +1,10 @@
 
 import { Calendar, CheckCircle, Circle, MessageCircle, Paperclip, User } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
-type TaskPriority = 'low' | 'medium' | 'high';
-type TaskStatus = 'pending' | 'inprogress' | 'completed';
+export type TaskPriority = 'low' | 'medium' | 'high';
+export type TaskStatus = 'pending' | 'inprogress' | 'completed';
 
-type TaskItemProps = {
+export type Task = {
   id: string;
   title: string;
   description: string;
@@ -15,6 +14,19 @@ type TaskItemProps = {
   assignee: string;
   commentsCount: number;
   attachmentsCount: number;
+};
+
+type TaskItemProps = {
+  id?: string;
+  title?: string;
+  description?: string;
+  status?: TaskStatus;
+  priority?: TaskPriority;
+  dueDate?: string;
+  assignee?: string;
+  commentsCount?: number;
+  attachmentsCount?: number;
+  task?: Task;
   onStatusChange?: (id: string, status: TaskStatus) => void;
   onClick?: (id: string) => void;
 };
@@ -65,19 +77,21 @@ const getStatusIcon = (status: TaskStatus) => {
   }
 };
 
-const TaskItem = ({
-  id,
-  title,
-  description,
-  status,
-  priority,
-  dueDate,
-  assignee,
-  commentsCount,
-  attachmentsCount,
-  onStatusChange,
-  onClick
-}: TaskItemProps) => {
+const TaskItem = (props: TaskItemProps) => {
+  // Use either directly passed props or extract from task object
+  const task = props.task || {};
+  const id = props.id || task.id || '';
+  const title = props.title || task.title || '';
+  const description = props.description || task.description || '';
+  const status = props.status || task.status || 'pending';
+  const priority = props.priority || task.priority || 'low';
+  const dueDate = props.dueDate || task.dueDate || '';
+  const assignee = props.assignee || task.assignee || '';
+  const commentsCount = props.commentsCount || task.commentsCount || 0;
+  const attachmentsCount = props.attachmentsCount || task.attachmentsCount || 0;
+  const onStatusChange = props.onStatusChange;
+  const onClick = props.onClick;
+
   const priorityStyles = getPriorityStyles(priority);
   const statusIcon = getStatusIcon(status);
 

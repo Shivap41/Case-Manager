@@ -1,22 +1,14 @@
 
 import { Clock, FileText, MessageSquare, Paperclip } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { Case } from '@/context/CaseContext';
 
-type CaseStatus = 'new' | 'inprogress' | 'pending' | 'completed';
+// Update the type definition to match the Case type from context
+type CaseStatus = 'new' | 'inprogress' | 'pending' | 'completed' | 'rejected';
 
-type CaseCardProps = {
-  id: string;
-  title: string;
-  description: string;
-  status: CaseStatus;
-  owner: string;
-  department: string;
-  dueDate: string;
-  comments: number;
-  attachments: number;
-  tasks: number;
-  completedTasks: number;
-};
+interface CaseCardProps {
+  caseData: Case;
+}
 
 const getStatusStyles = (status: CaseStatus) => {
   switch (status) {
@@ -44,6 +36,12 @@ const getStatusStyles = (status: CaseStatus) => {
         text: 'text-case-completed-foreground',
         label: 'Completed'
       };
+    case 'rejected':
+      return {
+        bg: 'bg-red-100',
+        text: 'text-red-800',
+        label: 'Rejected'
+      };
     default:
       return {
         bg: 'bg-gray-100',
@@ -53,24 +51,12 @@ const getStatusStyles = (status: CaseStatus) => {
   }
 };
 
-const CaseCard = ({
-  id,
-  title,
-  description,
-  status,
-  owner,
-  department,
-  dueDate,
-  comments,
-  attachments,
-  tasks,
-  completedTasks
-}: CaseCardProps) => {
-  const statusStyles = getStatusStyles(status);
+const CaseCard = ({ caseData }: CaseCardProps) => {
+  const statusStyles = getStatusStyles(caseData.status);
   
   return (
     <Link 
-      to={`/case/${id}`}
+      to={`/case/${caseData.id}`}
       className="glass-card rounded-xl p-5 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 flex flex-col h-full relative overflow-hidden"
     >
       <div 
@@ -85,42 +71,42 @@ const CaseCard = ({
         </span>
         <div className="text-xs text-muted-foreground flex items-center">
           <Clock className="h-3 w-3 mr-1" />
-          Due {dueDate}
+          Due {caseData.dueDate}
         </div>
       </div>
       
       <div>
-        <h3 className="font-medium text-lg mb-2">{title}</h3>
-        <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{description}</p>
+        <h3 className="font-medium text-lg mb-2">{caseData.title}</h3>
+        <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{caseData.description}</p>
       </div>
       
       <div className="mt-auto">
         <div className="flex justify-between items-center mb-3 text-xs text-muted-foreground">
-          <span>Owner: {owner}</span>
-          <span>Dept: {department}</span>
+          <span>Owner: {caseData.owner}</span>
+          <span>Dept: {caseData.department}</span>
         </div>
         
         <div className="flex justify-between items-center">
           <div className="flex space-x-3 text-xs">
             <div className="flex items-center text-muted-foreground">
               <FileText className="h-3 w-3 mr-1" />
-              <span>{completedTasks}/{tasks}</span>
+              <span>{caseData.completedTasks}/{caseData.tasks}</span>
             </div>
             <div className="flex items-center text-muted-foreground">
               <MessageSquare className="h-3 w-3 mr-1" />
-              <span>{comments}</span>
+              <span>{caseData.comments}</span>
             </div>
             <div className="flex items-center text-muted-foreground">
               <Paperclip className="h-3 w-3 mr-1" />
-              <span>{attachments}</span>
+              <span>{caseData.attachments}</span>
             </div>
           </div>
           
-          {status === 'inprogress' && (
+          {caseData.status === 'inprogress' && (
             <div className="w-20 h-1 bg-muted rounded-full overflow-hidden">
               <div 
                 className="h-full bg-primary" 
-                style={{ width: `${(completedTasks / tasks) * 100}%` }}
+                style={{ width: `${(caseData.completedTasks / caseData.tasks) * 100}%` }}
               ></div>
             </div>
           )}

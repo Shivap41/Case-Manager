@@ -1,145 +1,67 @@
 
-import { Upload, File, Archive, Image, FileText, AlertCircle, X } from 'lucide-react';
-import { useState } from 'react';
+import { FileText, Download, Trash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-type DocumentType = 'pdf' | 'image' | 'document' | 'archive' | 'other';
-
-type AttachedDocument = {
+export type Document = {
   id: string;
   name: string;
+  type: string;
   size: string;
-  type: DocumentType;
-  uploadDate: string;
+  uploadedBy: string;
+  uploadedDate: string;
 };
 
-// Sample documents for demonstration
-const sampleDocuments: AttachedDocument[] = [
-  {
-    id: '1',
-    name: 'Compliance_Report_Q2_2023.pdf',
-    size: '2.4 MB',
-    type: 'pdf',
-    uploadDate: 'Jul 12, 2023'
-  },
-  {
-    id: '2',
-    name: 'Risk_Assessment_Template.docx',
-    size: '845 KB',
-    type: 'document',
-    uploadDate: 'Jul 15, 2023'
-  },
-  {
-    id: '3',
-    name: 'Signature_Verification.jpg',
-    size: '1.2 MB',
-    type: 'image',
-    uploadDate: 'Jul 20, 2023'
-  }
-];
+interface DocumentAttachmentProps {
+  documents: Document[];
+  onDelete?: (id: string) => void;
+}
 
-const getFileIcon = (type: DocumentType) => {
-  switch (type) {
-    case 'pdf':
-      return <AlertCircle className="h-5 w-5 text-red-500" />;
-    case 'image':
-      return <Image className="h-5 w-5 text-blue-500" />;
-    case 'document':
-      return <FileText className="h-5 w-5 text-blue-700" />;
-    case 'archive':
-      return <Archive className="h-5 w-5 text-orange-500" />;
-    default:
-      return <File className="h-5 w-5 text-gray-500" />;
-  }
-};
-
-const DocumentAttachment = () => {
-  const [documents, setDocuments] = useState<AttachedDocument[]>(sampleDocuments);
-  const [isDragging, setIsDragging] = useState(false);
-
-  const handleDelete = (id: string) => {
-    setDocuments(documents.filter(doc => doc.id !== id));
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    // In a real application, you would handle file upload here
-    // For demo purposes, we're just showing the UI
+const DocumentAttachment = ({ documents, onDelete }: DocumentAttachmentProps) => {
+  const getFileIcon = (fileType: string) => {
+    // You can add more file type icons here
+    return <FileText className="h-10 w-10 text-primary" />;
   };
 
   return (
-    <div className="mt-6">
-      <h3 className="text-lg font-medium mb-3">Documents</h3>
-      
-      <div 
-        className={`border-2 border-dashed rounded-lg p-6 transition-colors flex flex-col items-center justify-center mb-4
-          ${isDragging ? 'border-primary bg-primary/5' : 'border-muted-foreground/20'}`}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-      >
-        <Upload className={`h-10 w-10 mb-3 ${isDragging ? 'text-primary' : 'text-muted-foreground/60'}`} />
-        <p className="text-sm text-center text-muted-foreground mb-2">
-          <span className="font-medium">Click to upload</span> or drag and drop
-        </p>
-        <p className="text-xs text-center text-muted-foreground">
-          PDF, DOC, DOCX, JPG, PNG up to 10MB
-        </p>
-        <input 
-          type="file" 
-          className="hidden" 
-          id="file-upload" 
-          multiple 
-          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" 
-        />
-        <label htmlFor="file-upload">
-          <Button variant="outline" size="sm" className="mt-4">
-            Select Files
-          </Button>
-        </label>
-      </div>
-      
-      <div className="space-y-3">
-        {documents.map(doc => (
-          <div 
-            key={doc.id}
-            className="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-secondary/50 transition-colors"
-          >
-            <div className="flex items-center">
-              {getFileIcon(doc.type)}
-              <div className="ml-3">
-                <p className="text-sm font-medium">{doc.name}</p>
-                <div className="flex items-center mt-1">
-                  <span className="text-xs text-muted-foreground">{doc.size}</span>
-                  <span className="mx-2 text-muted-foreground">•</span>
-                  <span className="text-xs text-muted-foreground">{doc.uploadDate}</span>
+    <div className="space-y-4">
+      {documents.length === 0 ? (
+        <div className="text-center py-10 text-muted-foreground">
+          No documents attached to this case.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {documents.map((doc) => (
+            <div key={doc.id} className="glass-card p-4 rounded-lg flex flex-col">
+              <div className="flex items-start mb-3">
+                {getFileIcon(doc.type)}
+                <div className="ml-3 flex-grow">
+                  <h4 className="font-medium text-base mb-1 break-all">{doc.name}</h4>
+                  <p className="text-xs text-muted-foreground">{doc.size}</p>
                 </div>
               </div>
+              
+              <div className="text-xs text-muted-foreground mb-4">
+                <p>Uploaded by: {doc.uploadedBy}</p>
+                <p>Date: {doc.uploadedDate}</p>
+              </div>
+              
+              <div className="mt-auto flex space-x-2">
+                <Button variant="outline" size="sm" className="flex-1">
+                  <Download className="h-3 w-3 mr-1" />
+                  Download
+                </Button>
+                {onDelete && (
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    onClick={() => onDelete(doc.id)}
+                  >
+                    <Trash className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
             </div>
-            
-            <button 
-              className="text-muted-foreground hover:text-destructive transition-colors"
-              onClick={() => handleDelete(doc.id)}
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        ))}
-      </div>
-      
-      {documents.length === 0 && (
-        <div className="text-center py-6 text-muted-foreground text-sm border border-dashed border-muted-foreground/20 rounded-lg">
-          No documents attached
+          ))}
         </div>
       )}
     </div>

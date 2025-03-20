@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 export type CaseStatus = 'new' | 'inprogress' | 'pending' | 'completed' | 'rejected';
@@ -16,6 +17,10 @@ export type DeviationApproval = {
   finalDecision?: 'approved' | 'rejected';
   finalDecisionDate?: string;
   finalDecisionComments?: string;
+  requestDate?: string;
+  rejectionDate?: string;
+  rejectionComments?: string;
+  approvalComments?: string;
 };
 
 export type NormalApproval = {
@@ -30,6 +35,10 @@ export type NormalApproval = {
   finalDecision?: 'approved' | 'rejected';
   finalDecisionDate?: string;
   finalDecisionComments?: string;
+  requestDate?: string;
+  rejectionDate?: string;
+  rejectionComments?: string;
+  approvalComments?: string;
 };
 
 export type Case = {
@@ -298,14 +307,20 @@ export const CaseProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const requestApproval = (caseId: string, approvalType: 'normal' | 'deviation', approver: string, comments: string) => {
+    const today = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
     setCases(prevCases => 
       prevCases.map(caseItem => {
         if (caseItem.id === caseId) {
-          const newCase = { 
+          const newCase: Case = { 
             ...caseItem, 
             status: 'pending' as CaseStatus,
             pendingApprovalType: approvalType,
-            currentApprovalLevel: 'firstLevel'
+            currentApprovalLevel: 'firstLevel' as ApprovalLevel
           };
           
           if (approvalType === 'deviation') {
@@ -313,14 +328,16 @@ export const CaseProvider = ({ children }: { children: ReactNode }) => {
               isRequired: true,
               status: 'pending',
               approver: approver,
-              comments: comments
+              comments: comments,
+              requestDate: today
             };
           } else {
             newCase.normalApproval = {
               isRequired: true,
               status: 'pending',
               approver: approver,
-              comments: comments
+              comments: comments,
+              requestDate: today
             };
           }
           
@@ -356,12 +373,12 @@ export const CaseProvider = ({ children }: { children: ReactNode }) => {
             if (action === 'approve') {
               approval.status = 'approved';
               approval.approvalDate = today;
-              approval.comments = comments;
+              approval.approvalComments = comments;
               newCase.status = 'completed';
             } else if (action === 'reject') {
               approval.status = 'rejected';
-              approval.approvalDate = today;
-              approval.comments = comments;
+              approval.rejectionDate = today;
+              approval.rejectionComments = comments;
               newCase.status = 'rejected';
             } else if (action === 'escalate' && escalateTo) {
               approval.status = 'escalated';
@@ -378,12 +395,12 @@ export const CaseProvider = ({ children }: { children: ReactNode }) => {
             if (action === 'approve') {
               approval.status = 'approved';
               approval.approvalDate = today;
-              approval.comments = comments;
+              approval.approvalComments = comments;
               newCase.status = 'completed';
             } else if (action === 'reject') {
               approval.status = 'rejected';
-              approval.approvalDate = today;
-              approval.comments = comments;
+              approval.rejectionDate = today;
+              approval.rejectionComments = comments;
               newCase.status = 'rejected';
             } else if (action === 'escalate' && escalateTo) {
               approval.status = 'escalated';
