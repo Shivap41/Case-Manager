@@ -10,6 +10,7 @@ import NotFound from "./pages/NotFound";
 import CreateCase from "./pages/CreateCase";
 import CaseDetail from "./pages/CaseDetail";
 import Tasks from "./pages/Tasks";
+import Dashboard from "./pages/Dashboard";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +23,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/create-case" element={<CreateCase />} />
             <Route path="/case/:id" element={<CaseDetail />} />
             <Route path="/tasks" element={<Tasks />} />

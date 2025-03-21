@@ -3,25 +3,13 @@ import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import Header from "@/components/Header";
-import TaskItem from "@/components/TaskItem";
+import TaskItem, { Task, TaskStatus } from "@/components/TaskItem";
+import TaskDetail from "@/components/TaskDetail";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-
-type Task = {
-  id: string;
-  title: string;
-  description: string;
-  status: 'pending' | 'inprogress' | 'completed';
-  priority: 'low' | 'medium' | 'high';
-  dueDate: string;
-  assignee: string;
-  commentsCount: number;
-  attachmentsCount: number;
-  caseId?: string;
-};
 
 // Sample initial tasks
 const initialTasks: Task[] = [
@@ -91,6 +79,8 @@ const Tasks = () => {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [isNewTaskDialogOpen, setIsNewTaskDialogOpen] = useState(false);
   const [filter, setFilter] = useState<'all' | 'pending' | 'inprogress' | 'completed'>('all');
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
   const [newTask, setNewTask] = useState<Omit<Task, 'id'>>({
     title: '',
     description: '',
@@ -102,10 +92,16 @@ const Tasks = () => {
     attachmentsCount: 0
   });
 
-  const handleStatusChange = (id: string, status: Task['status']) => {
+  const handleStatusChange = (id: string, status: TaskStatus) => {
     setTasks(tasks.map(task => 
       task.id === id ? { ...task, status } : task
     ));
+    
+    // Also update selectedTask if it's currently selected
+    if (selectedTask && selectedTask.id === id) {
+      setSelectedTask({ ...selectedTask, status });
+    }
+    
     toast.success(`Task status updated to ${status}`);
   };
 
@@ -128,6 +124,14 @@ const Tasks = () => {
       attachmentsCount: 0
     });
     toast.success('Task created successfully');
+  };
+
+  const handleTaskClick = (id: string) => {
+    const task = tasks.find(t => t.id === id);
+    if (task) {
+      setSelectedTask(task);
+      setIsTaskDetailOpen(true);
+    }
   };
 
   const filteredTasks = filter === 'all' 
@@ -182,9 +186,9 @@ const Tasks = () => {
           {filteredTasks.map(task => (
             <TaskItem
               key={task.id}
-              {...task}
+              task={task}
               onStatusChange={handleStatusChange}
-              onClick={(id) => console.log('Task clicked:', id)}
+              onClick={handleTaskClick}
             />
           ))}
 
@@ -273,6 +277,16 @@ const Tasks = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Task Detail Dialog */}
+      {selectedTask && (
+        <TaskDetail 
+          task={selectedTask}
+          open={isTaskDetailOpen}
+          onOpenChange={setIsTaskDetailOpen}
+          onStatusChange={handleStatusChange}
+        />
+      )}
     </div>
   );
 };

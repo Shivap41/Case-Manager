@@ -1,55 +1,119 @@
 
-import { Bell, Search, User } from 'lucide-react';
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React from 'react';
+import { useNavigate, NavLink } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Bell, Home, LayoutDashboard, FilePlus2, CheckSquare, Settings, LogOut } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
-const Header = () => {
-  const [searchQuery, setSearchQuery] = useState('');
+const Header: React.FC = () => {
+  const navigate = useNavigate();
 
   return (
-    <header className="sticky top-0 z-50 glassmorphism px-6 py-3 flex items-center justify-between">
-      <div className="flex items-center space-x-10">
-        <Link to="/" className="flex items-center">
-          <h1 className="text-xl font-semibold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
-            Case Manager
-          </h1>
-        </Link>
-        
-        <nav className="hidden md:flex items-center space-x-6">
-          <Link to="/" className="text-sm font-medium text-foreground hover:text-primary button-transition">
-            Dashboard
-          </Link>
-          <Link to="/cases" className="text-sm font-medium text-foreground hover:text-primary button-transition">
-            Cases
-          </Link>
-          <Link to="/tasks" className="text-sm font-medium text-foreground hover:text-primary button-transition">
-            Tasks
-          </Link>
-        </nav>
-      </div>
-
-      <div className="flex items-center space-x-4">
-        <div className="relative hidden md:block">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input 
-            type="text" 
-            placeholder="Search..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 pr-4 py-2 w-64 rounded-full bg-secondary border-none text-sm focus:ring-2 focus:ring-primary focus:outline-none"
+    <header className="border-b">
+      <div className="flex h-16 items-center px-4 container mx-auto">
+        <div className="flex items-center gap-2 font-semibold text-xl">
+          <img 
+            src="/placeholder.svg" 
+            alt="Logo"
+            className="h-8 w-8" 
           />
+          <span>ComplianceHub</span>
         </div>
         
-        <button className="relative button-transition p-2 rounded-full hover:bg-secondary">
-          <Bell className="h-5 w-5 text-foreground" />
-          <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-primary"></span>
-        </button>
+        <nav className="mx-6 flex items-center space-x-4 lg:space-x-6">
+          <NavLink
+            to="/"
+            className={({ isActive }) => 
+              `text-sm font-medium transition-colors hover:text-primary flex items-center gap-1 ${
+                isActive ? 'text-primary' : 'text-muted-foreground'
+              }`
+            }
+          >
+            <Home className="h-4 w-4" />
+            <span>Cases</span>
+          </NavLink>
+          
+          <NavLink
+            to="/dashboard"
+            className={({ isActive }) => 
+              `text-sm font-medium transition-colors hover:text-primary flex items-center gap-1 ${
+                isActive ? 'text-primary' : 'text-muted-foreground'
+              }`
+            }
+          >
+            <LayoutDashboard className="h-4 w-4" />
+            <span>Dashboard</span>
+          </NavLink>
+          
+          <NavLink
+            to="/tasks"
+            className={({ isActive }) => 
+              `text-sm font-medium transition-colors hover:text-primary flex items-center gap-1 ${
+                isActive ? 'text-primary' : 'text-muted-foreground'
+              }`
+            }
+          >
+            <CheckSquare className="h-4 w-4" />
+            <span>Tasks</span>
+          </NavLink>
+          
+          <NavLink
+            to="/create-case"
+            className={({ isActive }) => 
+              `text-sm font-medium transition-colors hover:text-primary flex items-center gap-1 ${
+                isActive ? 'text-primary' : 'text-muted-foreground'
+              }`
+            }
+          >
+            <FilePlus2 className="h-4 w-4" />
+            <span>Create Case</span>
+          </NavLink>
+        </nav>
         
-        <button className="flex items-center space-x-2 button-transition p-1.5 rounded-full hover:bg-secondary">
-          <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-            <User className="h-4 w-4 text-white" />
-          </div>
-        </button>
+        <div className="ml-auto flex items-center space-x-4">
+          <Button variant="ghost" size="icon" className="relative">
+            <Bell className="h-5 w-5" />
+            <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500"></span>
+          </Button>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src="" alt="User" />
+                  <AvatarFallback>JD</AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end" forceMount>
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">John Doe</p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    john.doe@example.com
+                  </p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Settings</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Log out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </header>
   );
