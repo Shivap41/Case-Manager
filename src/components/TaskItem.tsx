@@ -1,4 +1,3 @@
-
 import { Calendar, CheckCircle, Circle, MessageCircle, Paperclip, User } from 'lucide-react';
 
 export type TaskPriority = 'low' | 'medium' | 'high';
@@ -14,6 +13,7 @@ export type Task = {
   assignee: string;
   commentsCount: number;
   attachmentsCount: number;
+  caseId?: string; // Added caseId as an optional property
 };
 
 export type TaskItemProps = {
@@ -78,7 +78,6 @@ const getStatusIcon = (status: TaskStatus) => {
 };
 
 const TaskItem = (props: TaskItemProps) => {
-  // Use either directly passed props or extract from task object
   const task = props.task || {} as Task;
   const id = props.id || task.id || '';
   const title = props.title || task.title || '';
