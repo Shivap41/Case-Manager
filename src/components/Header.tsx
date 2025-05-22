@@ -25,7 +25,7 @@ const Header: React.FC = () => {
             alt="Logo"
             className="h-8 w-8" 
           />
-          <span>ComplianceHub</span>
+          <span>Case Manager</span>
         </div>
         
         <nav className="mx-6 flex items-center space-x-4 lg:space-x-6">
